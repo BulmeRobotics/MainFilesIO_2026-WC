@@ -12,7 +12,8 @@
 #ifdef _MSC_VER
     #pragma region Init //-------------------------------------------------------------------------------------------------------
 #endif
-void Ejector::Init(void) {
+void Ejector::Init(Driving* robot) {
+    p_driving = robot;
 	pinMode(PIN_SERVO_LEFT, OUTPUT);
 	pinMode(PIN_SERVO_RIGHT, OUTPUT);
 	
@@ -26,7 +27,8 @@ void Ejector::Init(void) {
     #pragma endregion
     #pragma region Eject //------------------------------------------------------------------------------------------------------
 #endif
-ErrorCodes Ejector::Eject(ErrorCodes side, uint8_t amount, Driving* robot) {
+ErrorCodes Ejector::Eject(ErrorCodes side, uint8_t amount) {
+    Driving* robot = p_driving;
 	if(amount == 0) return ErrorCodes::OK;
 	amount = constrain(amount, 1, 6);
 
@@ -92,4 +94,8 @@ ErrorCodes Ejector::Eject(ErrorCodes side, uint8_t amount, Driving* robot) {
         return ErrorCodes::OK;
 	}
     return ErrorCodes::invalid;
+}
+
+uint8_t Ejector::GetRemaining(ErrorCodes side) {
+    return (side == ErrorCodes::left) ? (remainingPacks >> 4) : (remainingPacks & 0x0F);
 }

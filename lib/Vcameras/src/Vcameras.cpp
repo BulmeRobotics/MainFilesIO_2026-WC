@@ -273,7 +273,7 @@ ErrorCodes Vcameras::Update(bool onRed, bool wallL, bool wallR){
     _ui->LED_BUZZER_Signal(500,500,1);
     _ui->Update();
     _ui->LED_BUZZER_Signal(500,500,4);
-    _ejector->Eject(side, amount, _robot);
+    _ejector->Eject(side, amount);
     _ui->Update();
     
     _ui->Update();

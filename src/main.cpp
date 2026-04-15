@@ -139,9 +139,6 @@ int main(void) {
   else
     UI.AddInfoMsg("Gyro", "ERROR", true);
 
-  //Ejector
-  ejector.Init();
-  UI.AddInfoMsg("Ejectors", "OK", true);
   UI.AddInfoMsg("Drivetrain", "OK", true);
 
   //Camera
@@ -151,6 +148,10 @@ int main(void) {
   //Robot
   robot.init(&cs, &tof, &gyro, &mapper, &cam ,&drivetrain);
   UI.AddInfoMsg("Driving", "OK", true);
+
+  //Ejector
+  ejector.Init(&robot);
+  UI.AddInfoMsg("Ejectors", "OK", true);
 
   UI.AddInfoMsg("Finished STARTUP", "ACK", false);
 #ifdef _MSC_VER

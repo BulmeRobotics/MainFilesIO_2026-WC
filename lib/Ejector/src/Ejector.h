@@ -16,33 +16,10 @@ class Driving;
 #include "CustomDatatypes.h"
 
 #ifdef _MSC_VER
+    #pragma endregion
     #pragma region Ejector Class //----------------------------------------------------------------------------------------------
 #endif
 class Ejector {
-    public:
-        // Constructor
-        Ejector(uint8_t rescuePacks = 12){
-            if(rescuePacks > 14) rescuePacks = 14;
-            rescuePacks /= 2;
-            remainingPacks = rescuePacks;
-            remainingPacks |= rescuePacks << 4;
-        }
-        
-        // Methods
-        /**
-        * @brief  Method to initialize and configure the Ejectors.
-        */
-        void Init(void);
-
-        /**
-        * @brief  Method to eject a certain amount of rescue kits with either the left or right Ejector.
-        * @param  side ErrorCodes: left / right
-        * @param amount the number of rescure kits that will be ejected (1-5).
-        * @return OK if no errors occured.
-        *         UNKNOWN if a parameter was wrong.
-        */
-        ErrorCodes Eject(ErrorCodes side, uint8_t amount, Driving* robot);
-
     private:
         // Pins
         static constexpr uint8_t PIN_SERVO_LEFT = 4;
@@ -61,8 +38,43 @@ class Ejector {
         // Rescue Packs
         uint8_t remainingPacks;    //b0-3 right, b4-7 left
 
-
         // Objects
         Servo servoLeft;
         Servo servoRight;
+
+        // Dependencies
+        Driving* p_driving = nullptr;
+
+    public:
+        // Constructor
+        Ejector(uint8_t rescuePacks = 12){
+            if(rescuePacks > 14) rescuePacks = 14;
+            rescuePacks /= 2;
+            remainingPacks = rescuePacks;
+            remainingPacks |= rescuePacks << 4;
+        }
+
+        // Methods
+        /**
+        * @brief  Initializes and configures the Ejectors.
+        * @param  robot pointer to Driving instance; used for 180° turns during fallback ejection.
+        */
+        void Init(Driving* robot);
+
+        /**
+        * @brief  Method to eject a certain amount of rescue kits with either the left or right Ejector.
+        * @param  side ErrorCodes: left / right
+        * @param  amount the number of rescue kits that will be ejected (1-6).
+        * @return OK if ejection completed successfully.
+        *         empty if no rescue packs remain.
+        *         invalid if side is neither left nor right.
+        */
+        ErrorCodes Eject(ErrorCodes side, uint8_t amount);
+
+        /**
+        * @brief  Returns the number of remaining rescue kits for a given side.
+        * @param  side ErrorCodes: left / right
+        * @return Number of remaining kits on the requested side.
+        */
+        uint8_t GetRemaining(ErrorCodes side);
     };
