@@ -22,7 +22,7 @@ pio run --target clean
 pio device monitor --baud 115200
 ```
 
-There are no automated tests. Verify behavior by flashing to hardware.
+There are no automated tests. After any major change, run `pio run` to verify the build succeeds. Full behavior verification requires flashing to hardware with `pio run --target upload`.
 
 ## Architecture
 
