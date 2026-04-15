@@ -6,6 +6,7 @@
 * @details: Header file for the ejector class
 */
 
+//----Forward-Declaration----
 class Driving;
 
 #ifdef _MSC_VER
@@ -21,40 +22,35 @@ class Driving;
 #endif
 class Ejector {
     private:
-        // Pins
+        //----Pins----
         static constexpr uint8_t PIN_SERVO_LEFT = 4;
         static constexpr uint8_t PIN_SERVO_RIGHT= 7;
 
-        // Positions
+        //----Positions----
         static constexpr int POS_CLOSED_LEFT    = 100;
         static constexpr int POS_OPEN_LEFT      = 18;
         static constexpr int POS_CLOSED_RIGHT   = 85;
         static constexpr int POS_OPEN_RIGHT     = 170;
 
-        // Timing
+        //----Timing----
         static constexpr uint16_t DELAY_OPEN    = 500;
         static constexpr uint16_t DELAY_CLOSE   = 250;
 
-        // Rescue Packs
+        //----Variables----
         uint8_t remainingPacks;    //b0-3 right, b4-7 left
 
-        // Objects
+        //----Objects----
         Servo servoLeft;
         Servo servoRight;
 
-        // Dependencies
+        //----Dependencies----
         Driving* p_driving = nullptr;
 
     public:
-        // Constructor
-        Ejector(uint8_t rescuePacks = 12){
-            if(rescuePacks > 14) rescuePacks = 14;
-            rescuePacks /= 2;
-            remainingPacks = rescuePacks;
-            remainingPacks |= rescuePacks << 4;
-        }
+        //----Constructor----
+        Ejector(uint8_t rescuePacks = 12);
 
-        // Methods
+        //----Methods----
         /**
         * @brief  Initializes and configures the Ejectors.
         * @param  robot pointer to Driving instance; used for 180° turns during fallback ejection.

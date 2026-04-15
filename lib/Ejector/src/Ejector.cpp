@@ -5,9 +5,16 @@
 * @details: .cpp file for the ejector class
 */
 
-// Libraries
+//----Libraries----
 #include "Ejector.h"
 #include <Driving.h>
+
+Ejector::Ejector(uint8_t rescuePacks) {
+	if(rescuePacks > 14) rescuePacks = 14;
+	rescuePacks /= 2;
+	remainingPacks = rescuePacks;
+	remainingPacks |= rescuePacks << 4;
+}
 
 #ifdef _MSC_VER
     #pragma region Init //-------------------------------------------------------------------------------------------------------
@@ -62,9 +69,9 @@ ErrorCodes Ejector::Eject(ErrorCodes side, uint8_t amount) {
 			robot->turn180Degree();
 		}
 		rLeft -= priAmount;
-        rRight -= secAmount;
-        remainingPacks = (rLeft << 4) | (rRight & 0x0f);
-        return ErrorCodes::OK;
+		rRight -= secAmount;
+		remainingPacks = (rLeft << 4) | (rRight & 0x0f);
+		return ErrorCodes::OK;
 	} else if(side == ErrorCodes::right){
 		uint8_t priAmount = min(amount, rRight);
 		uint8_t secAmount = min((uint8_t)(amount - priAmount), rLeft);
@@ -89,13 +96,13 @@ ErrorCodes Ejector::Eject(ErrorCodes side, uint8_t amount) {
 			robot->turn180Degree();
 		}
 		rRight -= priAmount;
-        rLeft -= secAmount;
-        remainingPacks = (rLeft << 4) | (rRight & 0x0f);
-        return ErrorCodes::OK;
+		rLeft -= secAmount;
+		remainingPacks = (rLeft << 4) | (rRight & 0x0f);
+		return ErrorCodes::OK;
 	}
-    return ErrorCodes::invalid;
+	return ErrorCodes::invalid;
 }
 
 uint8_t Ejector::GetRemaining(ErrorCodes side) {
-    return (side == ErrorCodes::left) ? (remainingPacks >> 4) : (remainingPacks & 0x0F);
+	return (side == ErrorCodes::left) ? (remainingPacks >> 4) : (remainingPacks & 0x0F);
 }
