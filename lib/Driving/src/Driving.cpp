@@ -10,8 +10,8 @@ ErrorCodes Driving::reverseBumper(uint16_t distance, int8_t speedLeft, int8_t sp
     p_drivetrain->EnableEncoder();
 	p_drivetrain->ResetEncoder();
 	while (p_drivetrain->GetEncoderDistance() < distance && buffer_beginTime + reverseBumperTimeout > millis()) {	//Drive back the distance, Check Timeout
-        p_drivetrain->SetSpeed_Left(speedLeft);
-        p_drivetrain->SetSpeed_Right(speedRight);
+        p_drivetrain->SetSpeedLeft(speedLeft);
+        p_drivetrain->SetSpeedRight(speedRight);
 	}
 	p_drivetrain->Stop();
 
@@ -412,8 +412,8 @@ ErrorCodes Driving::controlTurn(float angle) {
 		#endif
 
 		//Set the speed
-		p_drivetrain->SetSpeed_Left(turnSpeed);
-		p_drivetrain->SetSpeed_Right(-turnSpeed);
+		p_drivetrain->SetSpeedLeft(turnSpeed);
+		p_drivetrain->SetSpeedRight(-turnSpeed);
 	}
 	else {
 		//Stop all motors
@@ -539,8 +539,8 @@ ErrorCodes Driving::startAlign(void) {
 		#endif // DEBUG_DRIVING
 
 		//turning the robot with the calculated speed, in first cycle = 0
-		p_drivetrain->SetSpeed_Left(turnSpeed_align * coeff_side);
-		p_drivetrain->SetSpeed_Right(-turnSpeed_align * coeff_side);
+		p_drivetrain->SetSpeedLeft(turnSpeed_align * coeff_side);
+		p_drivetrain->SetSpeedRight(-turnSpeed_align * coeff_side);
 	} while (abs(distanceError) >= 5 && millis() - startTime < 1500);
 	//stoping all motors
 	p_drivetrain->Stop();
@@ -611,8 +611,8 @@ ErrorCodes Driving::controlDrive(int8_t driveSpeed, float angle) {
 	float powerLeft = driveSpeed - correctionSpeed;
 	float powerRight = driveSpeed + correctionSpeed;
 
-	p_drivetrain->SetSpeed_Left(powerLeft);
-	p_drivetrain->SetSpeed_Right(powerRight);
+	p_drivetrain->SetSpeedLeft(powerLeft);
+	p_drivetrain->SetSpeedRight(powerRight);
 
 	lastPID_timestamp = millis();
 

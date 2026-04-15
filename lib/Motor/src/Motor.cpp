@@ -5,7 +5,7 @@
 * @details: .cpp file for Motor driver class and the Drivetrain class
 */
 
-// Libraries
+//----Libraries----
 #include "Motor.h"
 
 #ifdef _MSC_VER
@@ -77,7 +77,7 @@ void Motor::DisableEncoder(void) {
 	detachInterrupt(digitalPinToInterrupt(encoderPhaseA));
 }
 
-//Private method to set the H-Bridge for positive direction.
+// Private method to set the H-Bridge for positive direction.
 void Motor::SetPositiveDirection(void) {
 	if (driver == DRIVER_A) {
 		digitalWrite(ccwPinA, LOW);
@@ -89,7 +89,7 @@ void Motor::SetPositiveDirection(void) {
 	}
 }
 
-//Private method to set the H-Bridge for negative direction.
+// Private method to set the H-Bridge for negative direction.
 void Motor::SetNegativeDirection(void) {
 	if (driver == DRIVER_A) {
 		digitalWrite(cwPinA, LOW);
@@ -101,7 +101,7 @@ void Motor::SetNegativeDirection(void) {
 	}
 }
 
-//Private method to settup the pins of the motor driver.
+// Private method to settup the pins of the motor driver.
 void Motor::InitDriverPins(uint8_t pinA, uint8_t pinB) {
 	pinMode(pinA, OUTPUT);
 	pinMode(pinB, OUTPUT);
@@ -124,28 +124,28 @@ void Drivetrain::SetSpeed(int8_t speed) {
 	SetSpeed(speed, speed, speed, speed);
 }
 
-void Drivetrain::SetSpeed_LB(int8_t speed) {
+void Drivetrain::SetSpeedLB(int8_t speed) {
 	motorLB.SetSpeed(speed);
 }
 
-void Drivetrain::SetSpeed_LF(int8_t speed) {
+void Drivetrain::SetSpeedLF(int8_t speed) {
 	motorLF.SetSpeed(speed);
 }
 
-void Drivetrain::SetSpeed_RF(int8_t speed) {
+void Drivetrain::SetSpeedRF(int8_t speed) {
 	motorRF.SetSpeed(speed);
 }
 
-void Drivetrain::SetSpeed_RB(int8_t speed) {
+void Drivetrain::SetSpeedRB(int8_t speed) {
 	motorRB.SetSpeed(speed);
 }
 
-void Drivetrain::SetSpeed_Left(int8_t speed) {
+void Drivetrain::SetSpeedLeft(int8_t speed) {
 	motorLB.SetSpeed(speed);
 	motorLF.SetSpeed(speed);
 }
 
-void Drivetrain::SetSpeed_Right(int8_t speed) {
+void Drivetrain::SetSpeedRight(int8_t speed) {
 	motorRB.SetSpeed(speed);
 	motorRF.SetSpeed(speed);
 }

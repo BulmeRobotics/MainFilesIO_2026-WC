@@ -13,7 +13,7 @@
 #include <cmath>
 #include "CustomDatatypes.h"
 
-//Encoder ISR - outside class
+// Encoder ISR - outside class
 void encoder_ISR(void);
 
 #ifdef _MSC_VER
@@ -28,6 +28,7 @@ class Motor {
         static constexpr float   GEAR_REDUCTION_RATIO      = 74.83f;
         static constexpr uint8_t CLICKS_PER_MOTOR_ROTATION = 11;
         static constexpr float   CLICKS_PER_SHAFT_ROTATION = GEAR_REDUCTION_RATIO * CLICKS_PER_MOTOR_ROTATION;
+
         //----Members----
         uint8_t cwPinA, ccwPinA, cwPinB, ccwPinB, pwmPin, encoderPhaseA;
         uint8_t driver;
@@ -97,7 +98,6 @@ class Motor {
         void DisableEncoder(void);
 };
 
-
 #ifdef _MSC_VER
     #pragma endregion
     #pragma region Drivetrain Class //------------------------------------------------------------------------------------------------
@@ -159,37 +159,37 @@ class Drivetrain {
         * @brief  Method to set the speed of the left-back motor in percent.
         * @param  speed percentage of the speed (-100% to +100%).
         */
-        void SetSpeed_LB(int8_t speed);
+        void SetSpeedLB(int8_t speed);
 
         /**
         * @brief  Method to set the speed of the left-front motor in percent.
         * @param  speed percentage of the speed (-100% to +100%).
         */
-        void SetSpeed_LF(int8_t speed);
+        void SetSpeedLF(int8_t speed);
 
         /**
         * @brief  Method to set the speed of the right-front motor in percent.
         * @param  speed percentage of the speed (-100% to +100%).
         */
-        void SetSpeed_RF(int8_t speed);
+        void SetSpeedRF(int8_t speed);
 
         /**
         * @brief  Method to set the speed of the right-back motor in percent.
         * @param  speed percentage of the speed (-100% to +100%).
         */
-        void SetSpeed_RB(int8_t speed);
+        void SetSpeedRB(int8_t speed);
 
         /**
         * @brief  Method to set the speed of the left-sided motors in percent.
         * @param  speed percentage of the speed (-100% to +100%).
         */
-        void SetSpeed_Left(int8_t speed);
+        void SetSpeedLeft(int8_t speed);
 
         /**
         * @brief  Method to set the speed of the right-sided motors in percent.
         * @param  speed percentage of the speed (-100% to +100%).
         */
-        void SetSpeed_Right(int8_t speed);
+        void SetSpeedRight(int8_t speed);
         
         /**
         * @brief  Method to stop all motors.
