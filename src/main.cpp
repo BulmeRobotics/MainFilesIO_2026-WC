@@ -165,8 +165,7 @@ while (true) {
   if (currentMenuState == RobotState::RUN) {
     if (currentRunState == RunState::INITIAL) { //Initial Run Logic
       mapper.Reset();
-      cam.Enable(true, ErrorCodes::left);
-      cam.Enable(true, ErrorCodes::right);
+      cam.Enable(true);
       robot.enableBumpers();	  //Enable Bumpers
 			robot.startAlign();	      //Start Aligning
 			gyro.ResetAllAngles();	  //Gyro angle zero
@@ -274,8 +273,7 @@ while (true) {
       robot.disableBumpers();
       UI.UpdateResetProgress("disable Bump",1,4);
       cs.Freeze(true);
-      cam.Enable(false, ErrorCodes::left);
-      cam.Enable(false, ErrorCodes::right);
+      cam.Enable(false);
 
       _CHECKPOINT = ErrorCodes::ready;
       UI.UpdateResetProgress("Start Ready ",2,4);
@@ -381,8 +379,7 @@ while (true) {
       //End of Run Logic
       robot.endDrive();
       robot.disableBumpers();
-      cam.Enable(false, ErrorCodes::left);
-      cam.Enable(false, ErrorCodes::right);
+      cam.Enable(false);
       UI.LED_BUZZER_Signal(1000,1000,5);
       currentMenuState = RobotState::ABOUT;
     }
@@ -418,7 +415,7 @@ void cyclicMainTask() {
 }
 void cyclicRunTask() {
   uint8_t buffer = tof.GetWalls(_RAMP_INFRONT, _RAMP_BEHIND);
-  cam.Update((cs.GetFloor() == TileType::dangerZone), (buffer & (1<<3)) != 0, (buffer & (1<<1)) != 0);
+  cam.Update(cs.GetFloor() == TileType::dangerZone);
 
   //Black Tile Handling
 	if(cs.GetFloor() == TileType::black) {
@@ -442,7 +439,7 @@ void cyclicRunTask() {
 		robot._SLOW_SPEED = true;
 
   //Reset to std speed mod if nth is on ALERT
-  if(!cs.GetAlert() && !cam.IsAlert(ErrorCodes::left) && !cam.IsAlert(ErrorCodes::right)) robot._SLOW_SPEED = false;
+  if(!cs.GetAlert() && !cam.IsAlert()) robot._SLOW_SPEED = false;
 
   //Bumper Handling
 	if(currentRunState != RunState::INITIAL){

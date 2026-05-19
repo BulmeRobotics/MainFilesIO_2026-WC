@@ -4,6 +4,7 @@
  * @author  Vincent Rohkamm
  * @brief   camera class for communication between Camera (either RASPI or OPENMV) and uC
  * @date    01.04.2026
+ * @todo    -UI Update for new Alert System
  */
 
 #include <Arduino.h>
@@ -21,20 +22,18 @@ class Vcameras
 {
 private:
     // --- Hardware Info ---
+    static constexpr unsigned long CAM_BAUD = 115200;
     static constexpr UART* CAMERA_L = &Serial2;     // D18  TX1 PD_5
-    static constexpr UART* CAMERA_R = &Serial3;  // D19  RX1 PD_6
 
-    static constexpr uint8_t CAMERAL_PIN_INT = 40;
-    static constexpr uint8_t CAMERAL_PIN_RST = 42;
-    
-    static constexpr uint8_t CAMERAR_PIN_INT = 41;
-    static constexpr uint8_t CAMERAR_PIN_RST = 43;
+    static constexpr uint8_t CAMERA_PIN_INT = 40;
+
+    static constexpr uint8_t CAMERAL_PIN_EN = 42;
+    static constexpr uint8_t CAMERAR_PIN_EN = 43;
 
     static constexpr uint32_t CAM_TIMEOUT = 300;
 
     //Serial
-    UART* _camL = CAMERA_L;
-    UART* _camR = CAMERA_R;
+    UART* _cam = CAMERA_L;
 
     // --- related Objects ---
     Ejector* _ejector = nullptr;
@@ -52,26 +51,22 @@ private:
     ErrorCodes HandleReset();
 
     // --- Interface ---
-    bool _connectedL = false;
-    bool _connectedR = false;
+    bool _connected = false;
+    bool _enabled = false;
 
     // --- State Fields ---
     bool _LeftEnabled = false, _RightEnabled = false;
-    bool _LeftAlert = false, _RightAlert = false;
+    bool _Alert = false;
     bool _oldRed = false;
 
     // Enable command state per camera (allows concurrent non-blocking left/right updates)
-    bool _enPendingL = false;
-    bool _enPendingR = false;
-    bool _enTargetL = false;
-    bool _enTargetR = false;
-    uint32_t _enStartL = 0;
-    uint32_t _enStartR = 0;
-    String _rxEnableL = "";
-    String _rxEnableR = "";
+    bool _pending = false;
+    bool _enTarget = false;
+    uint32_t _enStart = 0;
+    String _rxAsync = "";
 
-    ErrorCodes EnableNonBlockingStep(ErrorCodes side);
-    bool TryReceivePacketNonBlocking(ErrorCodes side, String& packet);
+    ErrorCodes EnableNonBlockingStep();
+    bool TryReceivePacketNonBlocking();
 
     // --- Response ---
     static volatile char _buffL[10];
@@ -79,11 +74,10 @@ private:
 
     /**
      * @brief Recieves Commandos
-     * @param side left / right
      * @param waittime time to block in ms
      * @return Commandostring
      */
-    String Recieve(ErrorCodes side, uint32_t waittime = 0);
+    String Recieve(uint32_t waittime = 0);
 
 public:
 
@@ -98,10 +92,10 @@ public:
     /**
      * @brief enables or disables Camera
      * @param en true...on, false...off
-     * @param side left / right
+     * @param side left / right / both
      * @return OK / Error
      */
-    ErrorCodes Enable(bool en, ErrorCodes side, bool blocking = true);
+    ErrorCodes Enable(bool en, bool blocking = true);
 
     /**
      * @brief camera handler has to be called periodically
@@ -110,7 +104,7 @@ public:
      * @param wallR is a wall Right?
      * @return ErrorCodes for debugging
      */
-    ErrorCodes Update(bool onRed, bool wallL = true, bool wallR = true);
+    ErrorCodes Update(bool onRed);
 
     /**
      * @brief Getter if Cam is enabled
@@ -123,10 +117,9 @@ public:
 
     /**
      * @brief Getter if Cam is in Alert
-     * @param cam ErrorCodes::left / ErrorCodes::right
-     * @return true...enabled, false...disabled
+     * @return true...ALERT, false...not ALERT
      */
-    bool IsAlert(ErrorCodes cam){
-        return (cam == ErrorCodes::left) ? _LeftAlert : _RightAlert;
+    bool IsAlert(){
+        return _Alert;
     }
 };

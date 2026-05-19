@@ -395,7 +395,7 @@ ErrorCodes Driving::controlTurn(float angle) {
 		//Calculate the turn speed with an exponential function
 		int16_t turnSpeed = 0;
 		float baseSpeed = 70.0;
-		if (p_cams->IsAlert(ErrorCodes::left) || p_cams->IsAlert(ErrorCodes::right)) {
+		if (p_cams->IsAlert()) {
 			baseSpeed = 30.0;	//Reduce speed if CS is on ALERT
 			_CAM_ALERT_TURN = true;
 		}

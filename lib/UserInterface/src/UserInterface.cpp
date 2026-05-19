@@ -205,12 +205,18 @@ void UserInterface::UpdateRunMenu() {
     // 1. KAMERA STATUS UPDATEN
     display.setTextSize(3);
     
+    //Kamera Alert
+    if(p_camera->IsAlert()){
+        //ALERT
+    }
+
+
     // Linke Kamera
     display.setCursor(MAP_AREA_WIDTH + 15, 85);
     if (!p_camera->IsEnabled(ErrorCodes::left)) {
         display.setTextColor(0x7BEF, HL_COLOR); // Grau
         display.print("DISABLED ");
-    } else if (p_camera->IsAlert(ErrorCodes::left)) {
+    } else if (false) {
         display.setTextColor(0xF800, HL_COLOR); // Rot
         display.print("ALERT!   ");
     } else {
@@ -223,7 +229,7 @@ void UserInterface::UpdateRunMenu() {
     if (!p_camera->IsEnabled(ErrorCodes::right)) {
         display.setTextColor(0x7BEF, HL_COLOR); 
         display.print("DISABLED ");
-    } else if (p_camera->IsAlert(ErrorCodes::right)) {
+    } else if (false) {
         display.setTextColor(0xF800, HL_COLOR); 
         display.print("ALERT!   ");
     } else {

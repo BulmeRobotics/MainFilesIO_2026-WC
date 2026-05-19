@@ -12,25 +12,25 @@ ErrorCodes Vcameras::Init(Ejector* ejector, Mapping* mapper, Driving* robot, Use
     _ui = ui;
     _drivetrain = drivetrain;
 
-    pinMode(CAMERAL_PIN_INT, INPUT);
-    pinMode(CAMERAR_PIN_INT, INPUT);
+    // Set Alert Pins as Input
+    pinMode(CAMERA_PIN_INT, INPUT);
 
-    _camL->begin(115200);
-    _camR->begin(115200);
+    //Set Enabled Pins as Input
+    pinMode(CAMERAL_PIN_EN,INPUT);
+    pinMode(CAMERAR_PIN_EN,INPUT);
+
+    //Start Communication
+    _cam->begin(CAM_BAUD);
 
     if(_debug_ifc != nullptr) _debug_ifc->println("Start Cam INIT");
 
     String str;
 
-    _camL->print("<I>");
-    str = Recieve(ErrorCodes::left, CAM_TIMEOUT);
-    _connectedL = (str.indexOf("OK") != -1) ? true : false;
-    
-    _camR->print("<I>");
-    str = Recieve(ErrorCodes::right, CAM_TIMEOUT);
-    _connectedR = (str.indexOf("OK") != -1) ? true : false;
+    _cam->print("<I>");
+    str = Recieve(CAM_TIMEOUT);
+    _connected = (str.indexOf("OK") != -1) ? true : false;
 
-    if(!_connectedL || !_connectedR) return ErrorCodes::no_connection;
+    if(!_connected) return ErrorCodes::no_connection;
     return ErrorCodes::OK;  
 }
 
@@ -38,72 +38,60 @@ ErrorCodes Vcameras::Init(Ejector* ejector, Mapping* mapper, Driving* robot, Use
 // Recieve UART
 //---------------------------------------------------------------------------------------------------------
 
-String Vcameras::Recieve(ErrorCodes side, uint32_t waittime){
-    UART* _ifc = (side == ErrorCodes::left) ? _camL : _camR;
-    //Wait if wanted
+String Vcameras::Recieve(uint32_t waittime){
     String str = "";
     uint32_t startTime = millis();
 
-    while (millis() - startTime <= waittime || waittime == 0) {
-        while (_ifc->available()) {
-            char c = _ifc->read();
-            if (c == '<') {
-                str = ""; // String bei neuem Paket zurücksetzen
-            } else if (c == '>') {
+    do {
+        while (_cam->available()){  //Is new Character available?
+            char c = _cam->read();  //Get char from UART
+            if (c == '<') { //Msg start
+                str = ""; 
+            } else if (c == '>') {  //Msg end
                 if(_debug_ifc != nullptr) _debug_ifc->println("Rec: " + str);
-                return str; // Komplettes Paket empfangen!
-            } else {
+                return str;
+            } else { 
                 str += c;
             }
         }
-        if (waittime == 0) break; // Kein Blockieren, wenn waittime 0 ist
-        delay(1);
-    }
-    return " "; // Timeout
+        if(waittime != 0) delay(1);
+    } while (millis() - startTime < waittime);
+
+    return " "; //Timeout
 }
 
-bool Vcameras::TryReceivePacketNonBlocking(ErrorCodes side, String& packet){
-    UART* ifc = (side == ErrorCodes::left) ? _camL : _camR;
-    String& rx = (side == ErrorCodes::left) ? _rxEnableL : _rxEnableR;
-
-    while (ifc->available()) {
-        char c = ifc->read();
+bool Vcameras::TryReceivePacketNonBlocking(){
+    while (_cam->available()) {
+        char c = _cam->read();
         if (c == '<') {
-            rx = "";
+            _rxAsync = "";
         } else if (c == '>') {
-            packet = rx;
-            rx = "";
-            if(_debug_ifc != nullptr) _debug_ifc->println("Rec(NB): " + packet);
+            if(_debug_ifc != nullptr) _debug_ifc->println("Rec(NB): " + _rxAsync);
             return true;
         } else {
-            rx += c;
+            _rxAsync += c;
         }
     }
     return false;
 }
 
-ErrorCodes Vcameras::EnableNonBlockingStep(ErrorCodes side){
-    bool& pending = (side == ErrorCodes::left) ? _enPendingL : _enPendingR;
-    bool& target = (side == ErrorCodes::left) ? _enTargetL : _enTargetR;
-    bool& enState = (side == ErrorCodes::left) ? _LeftEnabled : _RightEnabled;
-    uint32_t& startTs = (side == ErrorCodes::left) ? _enStartL : _enStartR;
-    UART* ifc = (side == ErrorCodes::left) ? _camL : _camR;
-
-    if (!pending) return ErrorCodes::OK;
+ErrorCodes Vcameras::EnableNonBlockingStep(){
+    if (!_pending) return ErrorCodes::OK;
 
     String packet;
-    if (TryReceivePacketNonBlocking(side, packet)) {
-        pending = false;
+    if (TryReceivePacketNonBlocking()) {
+        _pending = false;
         if (packet.indexOf("OK") != -1) {
-            enState = target;
+            _enabled = _enTarget;
+            if(_enabled == false) { _LeftEnabled = false; _RightEnabled = false; }
             return ErrorCodes::OK;
         }
         //_ui->ShowPopup("cams enable error", ErrorCodes::ERROR);
         return ErrorCodes::invalid;
     }
 
-    if ((millis() - startTs) > CAM_TIMEOUT) {
-        pending = false;
+    if ((millis() - _enStart) > CAM_TIMEOUT) {
+        _pending = false;
         _ui->ShowPopup("cams enable timeout", ErrorCodes::warning, 2);
         return ErrorCodes::TIMEOUT;
     }
@@ -115,44 +103,36 @@ ErrorCodes Vcameras::EnableNonBlockingStep(ErrorCodes side){
 // Enable
 //---------------------------------------------------------------------------------------------------------
 
-ErrorCodes Vcameras::Enable(bool en, ErrorCodes side, bool blocking){
+ErrorCodes Vcameras::Enable(bool en, bool blocking){
+    if(!_connected) return ErrorCodes::no_connection;   //Check for connection first
     if(en && _victimFound) return ErrorCodes::OK;
-    bool conn = (side == ErrorCodes::left) ? _connectedL : _connectedR;
-    if(!conn) return ErrorCodes::no_connection; //Return if no connection
 
-    //Create buffers
-    bool& enState =  (side == ErrorCodes::left) ? _LeftEnabled : _RightEnabled;
-    bool& pending = (side == ErrorCodes::left) ? _enPendingL : _enPendingR;
-    bool& target = (side == ErrorCodes::left) ? _enTargetL : _enTargetR;
-    uint32_t& startTs = (side == ErrorCodes::left) ? _enStartL : _enStartR;
-    UART* ifc = (side == ErrorCodes::left) ? _camL : _camR;
-
-    if (pending) {
-        if (target != en) {
+    if (_pending) {
+        if (_enTarget != en) {
             // Command changed while waiting -> restart request with latest target.
-            pending = false;
+            _pending = false;
         } else {
-            ErrorCodes step = EnableNonBlockingStep(side);
+            ErrorCodes step = EnableNonBlockingStep();
             if (!blocking || step != ErrorCodes::NO_NEW_DATA) return step;
         }
     }
 
-    if(enState == en) return ErrorCodes::OK;
+    if(_enabled == en) return ErrorCodes::OK;
 
     //Send command
     const char* cmd = en ? "<E>" : "<D>";
-    ifc->print(cmd);
+    _cam->print(cmd);
 
     // Prepare async wait state
-    pending = true;
-    target = en;
-    startTs = millis();
+    _pending = true;
+    _enTarget = en;
+    _enStart = millis();
 
     if(!blocking) return ErrorCodes::NO_NEW_DATA;
 
     // Blocking mode: keep stepping until done or timeout
     while (true) {
-        ErrorCodes step = EnableNonBlockingStep(side);
+        ErrorCodes step = EnableNonBlockingStep();
         if (step == ErrorCodes::NO_NEW_DATA) {
             delay(1);
             continue;
@@ -170,8 +150,7 @@ ErrorCodes Vcameras::HandleReset(){
     if(_timeFound + DEACT_TIME_VICTIM < millis()){
         _victimFound = false;
         //Enable cams
-        Enable(true,ErrorCodes::left, false);
-        Enable(true,ErrorCodes::right, false);
+        Enable(true, false);
         return ErrorCodes::OK;
     }
     return ErrorCodes::disabled;
@@ -181,56 +160,49 @@ ErrorCodes Vcameras::HandleReset(){
 // Update
 //---------------------------------------------------------------------------------------------------------
 
-ErrorCodes Vcameras::Update(bool onRed, bool wallL, bool wallR){
-    if(!_connectedL || !_connectedR) return ErrorCodes::no_connection;
+ErrorCodes Vcameras::Update(bool onRed){
+    if(!_connected) return ErrorCodes::no_connection;
 
     // Progress pending async enable commands for both cameras each cycle.
-    EnableNonBlockingStep(ErrorCodes::left);
-    EnableNonBlockingStep(ErrorCodes::right);
+    EnableNonBlockingStep();
+    EnableNonBlockingStep();
 
     if(HandleReset() == ErrorCodes::disabled) return ErrorCodes::disabled;
 
     if(_oldRed && !onRed) {
-        Enable(true, ErrorCodes::left, false);
-        Enable(true, ErrorCodes::right, false);
+        Enable(true, false);
     } else if (!_oldRed && onRed){
-        Enable(false, ErrorCodes::left, false);
-        Enable(false, ErrorCodes::right, false);
+        Enable(false, false);
     }
     _oldRed = onRed;
     if(onRed) return ErrorCodes::OK;
 
-    //Wände überprüfen
-    if(wallL && !_LeftEnabled)      Enable(true,  ErrorCodes::left, false);
-    else if(!wallL && _LeftEnabled) Enable(false, ErrorCodes::left, false);
+    if(!_enabled) return ErrorCodes::disabled;
 
-    if(wallR && !_RightEnabled)      Enable(true,  ErrorCodes::right, false);
-    else if(!wallR && _RightEnabled) Enable(false, ErrorCodes::right, false);
+    //check if cameras are enabled
+    _LeftEnabled = digitalRead(CAMERAL_PIN_EN);
+    _RightEnabled = digitalRead(CAMERAR_PIN_EN);
 
-    //Abfrage auf alert
-    if(_LeftEnabled) _LeftAlert = digitalRead(CAMERAL_PIN_INT);
-    if(_RightEnabled) _RightAlert = digitalRead(CAMERAR_PIN_INT);
+    //Check Alert State
+    if(_LeftEnabled || _RightEnabled) _Alert = digitalRead(CAMERA_PIN_INT);
 
     //Continue when no camera is reporting
-    if(!_LeftAlert && !_RightAlert) return ErrorCodes::OK;
+    if(!_Alert) return ErrorCodes::OK;
 
     String str = "";
     ErrorCodes side;
+
     //Wait for new Data
-    if(_LeftAlert){
-        str = Recieve(ErrorCodes::left);
-        if(str[0] != ' ')
-            side = ErrorCodes::left;
-        else return ErrorCodes::OK;
-    } else if(_RightAlert){
-        str = Recieve(ErrorCodes::right);
-        if(str[0] != ' ')
-            side = ErrorCodes::right;
-        else return ErrorCodes::OK;
-    }
+    str = Recieve();
+    if(str[0] == ' ') return ErrorCodes::OK;    //Is data valid?
+
+    //Determine victim side
+    if(str[0] == 'L') side = ErrorCodes::left;
+    else if(str[0] == 'R') side = ErrorCodes::right;
+    else return ErrorCodes::invalid;
     
-    //Dissect to side, and Victim Type
-    char victim = str[0];
+    //Determine Victim Type
+    char victim = str[1];
 
     //Check if Victim is allowed:
     if(!(victim == 'H' || victim == 'S' || victim == 'U')){
@@ -245,14 +217,14 @@ ErrorCodes Vcameras::Update(bool onRed, bool wallL, bool wallR){
         return err;
     }
 
-    //_robot->endDrive(); //Stops robot
+    //Stops robot
     _drivetrain->Stop();
 
     //Reset cams
     _victimFound = true;
     _timeFound = millis();
-    Enable(false, ErrorCodes::left, false);
-    Enable(false, ErrorCodes::right, false);
+    Enable(false, false);
+    Enable(false, false);
 
     //Get Amount of dropped Rescue Packs
     uint8_t amount;
@@ -267,12 +239,17 @@ ErrorCodes Vcameras::Update(bool onRed, bool wallL, bool wallR){
         amount = 0;
         break;
     }
+
+    //Signal Victim
     char buffer[20];
     sprintf(buffer,"VICTIM Detected: %c", victim);
     _ui->ShowPopup(buffer, ErrorCodes::info, 5);
-    _ui->LED_BUZZER_Signal(500,500,1);
+
+    _ui->LED_BUZZER_Signal(500, 500 ,1);
     _ui->Update();
-    _ui->LED_BUZZER_Signal(500,500,4);
+    _ui->LED_BUZZER_Signal(500, 500 ,4);
+
+    //Eject
     _ejector->Eject(side, amount);
     _ui->Update();
     
@@ -285,8 +262,8 @@ ErrorCodes Vcameras::Update(bool onRed, bool wallL, bool wallR){
     else
         _robot->_CAM_VICTIM = true;
 
-    //2RC - Harmed
-    //1RC - Stable
-    //0RC - Unharmed
+    //2RP - Harmed
+    //1RP - Stable
+    //0RP - Unharmed
     return ErrorCodes::OK;
 }
