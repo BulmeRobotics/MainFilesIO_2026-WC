@@ -30,8 +30,8 @@ There are no automated tests. After any major change, run `pio run` to verify th
 
 The main loop runs two nested state machines:
 
-- **`RobotState`** (menu/mode): `BOOT` → `RUN`, plus `SETTINGS`, `INFO_SENSOR`, `INFO_VISUAL`, `BT`
-- **`RunState`** (execution): `INITIAL` → `SETTILE` → `GET_INSTRUCTIONS` → `TURN`/`CHECK_DRIVE`/`DRIVE`/`RAMP`/`SCAN` → `SETTILE` (cyclic)
+- **`RobotState`** (menu/mode): `BOOT` → `RUN`, plus `SETTINGS`, `INFO_SENSOR`, `INFO_VISUAL`, `BT`, `ABOUT`, `CALIBRATION`, `CHECKPOINT`
+- **`RunState`** (execution): `INITIAL` → `SETTILE` → `GET_INSTRUCTIONS` → `TURN`/`CHECK_DRIVE`/`DRIVE`/`RAMP`/`SCAN` → `SETTILE` (cyclic), plus `CHECKPOINT_RESET`, `ALIGN`, `END`
 
 The **black button** (pin 49, ISR) starts a run or triggers a checkpoint reset. The **gray button** (pin 51, ISR) cycles drive speed modes via the UI.
 
@@ -48,7 +48,7 @@ Each library lives in `lib/<Name>/src/`. All share types from `CustomDatatypes`.
 | `Mapping` | A* pathfinding on a 3D tile grid (up to 256 tiles). Outputs `Instructionset` commands (turn/drive/ramp). Handles checkpoints and multi-level ramps. |
 | `Driving` | High-level motion: PID wall-following, turn control, ramp detection/traversal, bumper avoidance. Depends on all sensors + `Mapping`. |
 | `Motor` | Low-level `Motor` class and `Drivetrain` (two motors + encoder ISR). |
-| `TofSensors` | Aggregates all ToF sensors (VL6180X short-range sides, VL53L4CD front/back, VL53L5CX 8×8 array). Returns wall bitmask for `Mapping`. |
+| `TofSensors` | Aggregates all ToF sensors (VL53L4CD for all 6 directional sensors, VL53L5CX 8×8 array for ramp detection). Returns wall bitmask for `Mapping`. Note: `TofVL6180X` class exists in the source but is not currently instantiated. |
 | `ColorSensing` | AS7341 spectral sensor for floor type detection (`TileType`: checkpoint, blue, black, dangerZone). Stores calibration in FRAM via EEPROM. |
 | `Gyro` | BNO055 IMU wrapper. Provides absolute/relative angles and `GetAngleFromOrientation()` for cardinal directions. |
 | `Ejector` | Two servo-driven rescue kit dispensers (left pin 4, right pin 7). Tracks remaining kits in nibble-packed byte. |
@@ -97,3 +97,58 @@ All 6 VL53L4CD sensors share the same default I2C address at power-on. `TofSenso
 | `back` | Back wall | VL53L4CD | A6 | 0x78 |
 | `front_x64` | Front ramp detection (8×8) | VL53L5CX | 32 | 0x46 |
 | `back_x64` | Back ramp detection (8×8) | VL53L5CX | 26 | 0x47 |
+
+## Agent Workflow Guidelines
+
+When writing a **complete new class or library** (header + implementation), spawn a review agent afterward that runs `/check-style` and `fix-jsdoc` before committing.
+
+When making **changes to a shared interface** (especially `CustomDatatypes.h`, or any `lib/` header that other modules include), spawn a second agent to check which other libraries are affected and whether they need updates. Cross-library ripple effects are easy to miss manually.
+
+For **bug fixes, small tweaks, or iterative hardware debugging**, work directly — the agent overhead is not worth it.
+
+Rule of thumb: if the change touches more than one library or introduces a new public interface, evaluate whether a Ruflo agent would catch something you'd otherwise miss.
+
+## Known Issues (pending fixes)
+
+- **ISR race condition** (`main.cpp`): `currentMenuState`, `currentRunState`, `_CHECKPOINT` are written in ISRs but not declared `volatile`. At higher optimization levels the compiler may cache them in registers and the main loop will never see ISR writes.
+- **Ramp direction tautology** (`main.cpp`, `SCAN` state): `if(robot.currentRobotHeight < robot.currentRobotHeight + robot.RAMP_HEIGHT)` always reduces to `0 < RAMP_HEIGHT` — `currentRobotHeight` cancels out. Should be `if (robot.RAMP_HEIGHT > 0)` / `< 0`.
+- **Dead flag** (`main.cpp`): `_ROBOT_TURNING` is set in all four `GET_INSTRUCTIONS` turn cases but never read anywhere.
+- **Naming inconsistency**: `robot.init()` is lowercase; every other module uses `Init()`.
+- **`ErrorCodes` god-enum** (`CustomDatatypes.h`): mixes error states, cardinal directions, popup severity, ejector state, and checkpoint flow control in one enum. Long-term maintenance risk.
+
+## Driving Library Refactor Plan
+
+The `Driving` library is functional and competition-proven but needs cleanup before the World Championship. **The logic and behavior of every method must remain identical through Phases 1–4.** Phase 5 is the only phase that intentionally changes behavior.
+
+Run `/check-style` + `fix-jsdoc` review agent after each phase. Spawn a second agent to check `main.cpp` and `Vcameras` for interface breakage after Phase 3.
+
+### Phase 1 — Cosmetics
+- Move debug `#define`s (`DEBUG_RAMP`, `DEBUG_DRIVING`, etc.) out of `protected:` to top of `.cpp`
+- Replace `#define` constants inside the class (`MIN_SETTILE_TIME`, `INCLINE_ARRAY_SIZE`, `reverseBumperTimeout`) with `static constexpr`
+- Add/complete JSDoc on all public methods
+- Align naming to style guide (`init` → `Init`, etc.)
+
+### Phase 2 — Type & correctness fixes
+- Replace `String side` with `enum class AlignSide : uint8_t { Left, Right }` — update all comparisons in `startAlign()`
+- Fix `uint16_t startTime` local variable in `startAlign()` to `uint32_t` (shadows member; overflows after ~65s)
+- Remove unreachable debug block and duplicate `return` at end of `checkDrive()`
+
+### Phase 3 — Visibility cleanup
+- Audit all `public` members; move implementation internals (`integralError`, `derivativeError`, `sensor`, `nextTargetDistance`, `newValue`) to `private`
+- Rename `getOptimalSensor()` to reflect its side-effect contract: it consumes and clears `_RAMP_INFRONT`/`_RAMP_BEHIND` flags after locking out unreliable sensors
+
+### Phase 4 — Method decomposition
+Break long methods into focused private helpers. No logic changes.
+
+| Method | Helpers to extract |
+|---|---|
+| `checkRamp()` | `updateInclineCounters(float)`, `evaluateRampDecision()` |
+| `rampHandler()` | `applyRampCorrection()`, `calculateRampGeometry()` |
+| `startAlign()` | `selectAlignSide()` (naturally absorbs the Phase 2 AlignSide change) |
+| `bumperHandler()` | `executeBumperManeuver()`, `handleWallCollision()` |
+| `getOptimalSensor()` | `applyRampFlagOverrides(TOF_Optimal_Value&)` |
+
+Watch carefully: several methods have side effects at specific points in their logic (`checkRamp()` calls `p_mapSys->Move()` and `disableBumpers()` mid-detection; `controlTurn()` mutates `_CAM_ALERT_TURN`). These must land in exactly the right place in the extracted helpers.
+
+### Phase 5 — PID controller rewrite
+The current PID in `controlDrive()` uses Ziegler-Nichols approximation with fixed loop duration assumptions. This phase replaces it with a cleaner implementation. **Behavior will intentionally change here** — tune on hardware after implementation.
