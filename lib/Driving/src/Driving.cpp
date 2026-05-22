@@ -771,7 +771,7 @@ TOF_Optimal_Value Driving::getOptimalSensor(bool rampDown){
     #endif // DEBUG
 	return result;
 }
-void Driving::init(ColorSensing* p_colorSensing, TofSensors* p_tof, Gyro* p_gyro, Mapping* mapSys_pointer, Vcameras* cam_pointer, Drivetrain* p_drivetrain) {
+void Driving::init(ColorSensing* p_colorSensing, TofSensors* p_tof, GyroBase* p_gyro, Mapping* mapSys_pointer, Vcameras* cam_pointer, Drivetrain* p_drivetrain) {
     this->p_colorSensing = p_colorSensing;
     this->p_tof = p_tof;
     this->p_gyro = p_gyro;

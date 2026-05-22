@@ -71,7 +71,7 @@ private:
 //Obj Pointer -------------------------------------------------------------------------------------------------------------------------
     ColorSensing*  p_colorSensing = nullptr;
     TofSensors*    p_tof = nullptr;
-    Gyro*          p_gyro = nullptr;
+    GyroBase*      p_gyro = nullptr;
     Drivetrain*    p_drivetrain = nullptr;
     Mapping*       p_mapSys = nullptr;
     Vcameras*      p_cams = nullptr;
@@ -172,7 +172,7 @@ public:
      * @brief  Initializes the Driving module and links all required subsystems.
      * @param  Pointers to all required modules (sensors, mapping, drivetrain).
      */
-    void init(ColorSensing* p_colorSensing, TofSensors* p_tof, Gyro* p_gyro, Mapping* mapSys_pointer, Vcameras* cam_pointer, Drivetrain* p_drivetrain);
+    void init(ColorSensing* p_colorSensing, TofSensors* p_tof, GyroBase* p_gyro, Mapping* mapSys_pointer, Vcameras* cam_pointer, Drivetrain* p_drivetrain);
 
     //Bumpers:  
     /**
