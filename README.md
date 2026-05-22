@@ -1,6 +1,7 @@
 # MainFilesIO 2026
 
 Firmware for the BulmeRobotics RoboCup Junior Rescue Maze robot (2025/26 season).
+Forked to further implement the rules for the World Cup.
 
 Runs on an **Arduino Giga R1 M7** (STM32H747 dual-core). The robot navigates a maze autonomously, detects floor colors and victims, handles ramps, and deploys rescue kits.
 
