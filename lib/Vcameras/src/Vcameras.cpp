@@ -254,13 +254,7 @@ ErrorCodes Vcameras::Update(bool onRed){
     _ui->Update();
     
     _ui->Update();
-    _robot->integralError = 0;
-    _robot->derivativeError = 0;
-
-    if(_robot->_TURNING)
-        _robot->_CAM_ALERT_TURN = true;
-    else
-        _robot->_CAM_VICTIM = true;
+    _robot->OnVictimDetected();
 
     //2RP - Harmed
     //1RP - Stable

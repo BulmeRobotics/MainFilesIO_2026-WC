@@ -169,8 +169,8 @@ while (true) {
       robot.enableBumpers();	  //Enable Bumpers
 			robot.startAlign();	      //Start Aligning
 			gyro.ResetAllAngles();	  //Gyro angle zero
-			robot.maxRampIncline = 0;
-			robot.currentRobotHeight = 0;
+			robot.SetMaxRampIncline(0);
+			robot.SetCurrentRobotHeight(0);
       delay(250); 
       currentRunState = RunState::SETTILE;
     }
@@ -184,7 +184,7 @@ while (true) {
       //Checkpoint handling
       if(cs.GetFloor() == TileType::checkpoint) UI.ShowPopup("CHECKPOINT",ErrorCodes::info, 4);
 			currentRunState = RunState::GET_INSTRUCTIONS;
-      robot.lastSetTile = millis();
+      robot.SetLastSetTile(millis());
     } 
 
     else if (currentRunState == RunState::GET_INSTRUCTIONS) {
@@ -197,8 +197,8 @@ while (true) {
         robot.endDrive();
 				robot.startAdjustment();
 				currentRunState = RunState::TURN;
-				robot.robotTargetAngle = Orientations::North;
-        robot.startTurn(gyro.GetAngleFromOrientation(robot.robotTargetAngle));
+				robot.SetRobotTargetAngle(Orientations::North);
+        robot.startTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 				_ROBOT_TURNING = true;
         break;
 
@@ -207,8 +207,8 @@ while (true) {
 				robot.endDrive();
 				robot.startAdjustment();
 				currentRunState = RunState::TURN;
-				robot.robotTargetAngle = Orientations::East;
-        robot.startTurn(gyro.GetAngleFromOrientation(robot.robotTargetAngle));
+				robot.SetRobotTargetAngle(Orientations::East);
+        robot.startTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 				_ROBOT_TURNING = true;
         break;
 
@@ -217,8 +217,8 @@ while (true) {
 				robot.endDrive();
 				robot.startAdjustment();
 				currentRunState = RunState::TURN;
-				robot.robotTargetAngle = Orientations::South;
-        robot.startTurn(gyro.GetAngleFromOrientation(robot.robotTargetAngle));
+				robot.SetRobotTargetAngle(Orientations::South);
+        robot.startTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 				_ROBOT_TURNING = true;
         break;
 
@@ -227,8 +227,8 @@ while (true) {
 				robot.endDrive();
 				robot.startAdjustment();
 				currentRunState = RunState::TURN;
-				robot.robotTargetAngle = Orientations::West;
-        robot.startTurn(gyro.GetAngleFromOrientation(robot.robotTargetAngle));
+				robot.SetRobotTargetAngle(Orientations::West);
+        robot.startTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 				_ROBOT_TURNING = true;
         break;
 
@@ -288,7 +288,7 @@ while (true) {
       cs.Update();
       delay(200);
       mapper.RestartCheckpoint();
-      robot.robotTargetAngle = Orientations::North;
+      robot.SetRobotTargetAngle(Orientations::North);
       UI.UpdateResetProgress("Reset Map   ",4,4);
       _CHECKPOINT = ErrorCodes::OK;
       currentRunState = RunState::SETTILE;
@@ -297,7 +297,7 @@ while (true) {
     
     else if (currentRunState == RunState::TURN) {
       //Turn Logic
-      if (robot.controlTurn(gyro.GetAngleFromOrientation(robot.robotTargetAngle)) == ErrorCodes::TURNED) {
+      if (robot.controlTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle())) == ErrorCodes::TURNED) {
         robot.endTurn();
         _ROBOT_TURNING = false;
 				currentRunState = RunState::SETTILE;
@@ -322,7 +322,7 @@ while (true) {
 
     else if (currentRunState == RunState::DRIVE) {
       //Control Logic
-      ErrorCodes driveSave = robot.controlDrive((UI.GetDriveSpeed()), gyro.GetAngleFromOrientation(robot.robotTargetAngle));
+      ErrorCodes driveSave = robot.controlDrive((UI.GetDriveSpeed()), gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 			if(driveSave == ErrorCodes::CHECK_DRIVE) currentRunState = RunState::CHECK_DRIVE;
 			else if (driveSave == ErrorCodes::TIMEOUT) {
         robot.timeoutDrive();
@@ -333,36 +333,35 @@ while (true) {
 
     else if (currentRunState == RunState::SCAN) {
 			//Move the robot in the next tile and scan next field
-			if (!robot._ON_RAMP)
+			if (!robot.IsOnRamp())
         mapper.Move(true);	//Move robot forward
 
-			//if Ramp detected during DRIVE give 
-			if(robot._ON_RAMP){
+			//if Ramp detected during DRIVE give
+			if(robot.IsOnRamp()){
 				uint8_t rampLenght = 0;
 				int8_t rampDirection = 0;
-			
+
 				//Calculate RAMP INFOS
-				rampLenght = (robot.RAMP_LENGTH / 300);	//Calculate num of Tiles
-        if (rampLenght == 0 && robot.RAMP_LENGTH >= 100)
+				rampLenght = (robot.GetRampLength() / 300);	//Calculate num of Tiles
+        if (rampLenght == 0 && robot.GetRampLength() >= 100)
           rampLenght = 1;
 				//Determine RAMP Direction
-				if(robot.currentRobotHeight < robot.currentRobotHeight + robot.RAMP_HEIGHT){
-					if(robot.currentRobotHeight <= LOWER_LEVEL_HEIGHT && robot.currentRobotHeight + robot.RAMP_HEIGHT > LOWER_LEVEL_HEIGHT
+				if(robot.GetCurrentRobotHeight() < robot.GetCurrentRobotHeight() + robot.GetRampHeight()){
+					if(robot.GetCurrentRobotHeight() <= LOWER_LEVEL_HEIGHT && robot.GetCurrentRobotHeight() + robot.GetRampHeight() > LOWER_LEVEL_HEIGHT
 						) rampDirection = 1;
-					else if(robot.currentRobotHeight < UPPER_LEVEL_HEIGHT && robot.currentRobotHeight + robot.RAMP_HEIGHT >= UPPER_LEVEL_HEIGHT
-						) rampDirection = 1;						 
+					else if(robot.GetCurrentRobotHeight() < UPPER_LEVEL_HEIGHT && robot.GetCurrentRobotHeight() + robot.GetRampHeight() >= UPPER_LEVEL_HEIGHT
+						) rampDirection = 1;
 				}
-				else if(robot.currentRobotHeight > robot.currentRobotHeight + robot.RAMP_HEIGHT){
-					if(robot.currentRobotHeight >= UPPER_LEVEL_HEIGHT && robot.currentRobotHeight + robot.RAMP_HEIGHT < UPPER_LEVEL_HEIGHT
+				else if(robot.GetCurrentRobotHeight() > robot.GetCurrentRobotHeight() + robot.GetRampHeight()){
+					if(robot.GetCurrentRobotHeight() >= UPPER_LEVEL_HEIGHT && robot.GetCurrentRobotHeight() + robot.GetRampHeight() < UPPER_LEVEL_HEIGHT
 						) rampDirection = -1;
-
-					else if(robot.currentRobotHeight < UPPER_LEVEL_HEIGHT && robot.currentRobotHeight + robot.RAMP_HEIGHT <= LOWER_LEVEL_HEIGHT
+					else if(robot.GetCurrentRobotHeight() < UPPER_LEVEL_HEIGHT && robot.GetCurrentRobotHeight() + robot.GetRampHeight() <= LOWER_LEVEL_HEIGHT
 						) rampDirection = -1;
 				}
-				robot.currentRobotHeight += robot.RAMP_HEIGHT;
-				if(robot.currentRobotHeight <= RESET_HEIGHT_SPAN && robot.currentRobotHeight >= -RESET_HEIGHT_SPAN) robot.currentRobotHeight = 0;
-				robot._ON_RAMP = false;
-				robot.maxRampIncline = 0;					
+				robot.SetCurrentRobotHeight(robot.GetCurrentRobotHeight() + robot.GetRampHeight());
+				if(robot.GetCurrentRobotHeight() <= RESET_HEIGHT_SPAN && robot.GetCurrentRobotHeight() >= -RESET_HEIGHT_SPAN) robot.SetCurrentRobotHeight(0);
+				robot.ClearOnRamp();
+				robot.SetMaxRampIncline(0);
 				//pass RampInfos to Mapping
         // Serial.println("Ramp D: " + String(rampDirection));
         if (rampDirection == 1)
@@ -436,10 +435,10 @@ void cyclicRunTask() {
 
   //Drive Slower if FRONT detects change
 	if(cs.GetAlert() && !cs.Freeze())
-		robot._SLOW_SPEED = true;
+		robot.SetSlowSpeed(true);
 
   //Reset to std speed mod if nth is on ALERT
-  if(!cs.GetAlert() && !cam.IsAlert()) robot._SLOW_SPEED = false;
+  if(!cs.GetAlert() && !cam.IsAlert()) robot.SetSlowSpeed(false);
 
   //Bumper Handling
 	if(currentRunState != RunState::INITIAL){
