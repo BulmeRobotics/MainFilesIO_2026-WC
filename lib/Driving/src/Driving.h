@@ -305,9 +305,28 @@ private:
 	float	correctionSpeed   = 0.0;
 	long	lastPID_timestamp = 0;
 
+	enum class AlignSide : uint8_t { Left, Right, None };
+
 	//----Private methods----
 	ErrorCodes			finishRamp(uint8_t distance);
-	ErrorCodes			checkRamp(void);
 	PID_Coefficients	calculatePIDCoefficients(float loopDuration);
 	TOF_Optimal_Value	getOptimalSensor(bool rampDown);
+
+	//----Ramp helpers----
+	ErrorCodes			checkRamp(void);
+	void				updateInclineCounters(float incline);
+	void				evaluateRampDecision(void);
+	void				recordInclineSample(float incline);
+	void				classifyAndFinishRamp(void);
+	void				calculateRampGeometry(void);
+
+	//----Alignment helpers----
+	AlignSide			selectAlignSide(void);
+
+	//----Bumper helpers----
+	ErrorCodes			handleWallCollision(void);
+	void				executeBumperManeuver(void);
+
+	//----Sensor helpers----
+	void				applyRampFlagOverrides(TOF_Optimal_Value& result);
 };

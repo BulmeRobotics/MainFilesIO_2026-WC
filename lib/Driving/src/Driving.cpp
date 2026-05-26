@@ -14,8 +14,6 @@
 //#define DEBUG_TURN
 //#define DEBUG_DRIVING_1
 
-enum class AlignSide : uint8_t { Left, Right, None };
-
 #ifdef _MSC_VER
 #pragma region BUMPERS
 #endif
@@ -42,62 +40,144 @@ ErrorCodes Driving::disableBumpers(void){
     _ENABLE_BUMPERS = false;	//Disable Bumpers
     return ErrorCodes::OK;
 }
+// Registers a wall collision: updates the map, resets bump counter, backs away.
+ErrorCodes Driving::handleWallCollision(void){
+	p_mapSys->Bumper();
+	_registeredBumps = 0;
+	reverseBumper(40, -40, -40);
+	return ErrorCodes::BUMPER_WALL;
+}
+
+// Executes the avoidance S-curve based on which bumper was triggered.
+void Driving::executeBumperManeuver(void){
+	if (digitalRead(BUMPER_LEFT_PIN) && digitalRead(BUMPER_RIGHT_PIN)) {
+		reverseBumper(30, -40, -40);
+	}
+	else if (digitalRead(BUMPER_LEFT_PIN)) {
+		reverseBumper(70, -50,  50);
+		reverseBumper(40, -50, -50);
+		reverseBumper(90,  50, -50);
+	}
+	else if (digitalRead(BUMPER_RIGHT_PIN)) {
+		reverseBumper(70,  50, -50);
+		reverseBumper(40, -50, -50);
+		reverseBumper(90, -50,  50);
+	}
+}
+
 ErrorCodes Driving::bumperHandler(void){
     if (_ENABLE_BUMPERS) {
 		if (digitalRead(BUMPER_LEFT_PIN) || digitalRead(BUMPER_RIGHT_PIN)) {
 			p_drivetrain->Stop();
 			delay(200);
 
-			_registeredBumps += 1;	//add 1 to bump registered
+			_registeredBumps += 1;
 
-			if(_registeredBumps > BUMPER_TRYS){
-				p_mapSys->Bumper();
-				_registeredBumps = 0;
-
-				reverseBumper(40,-40,-40); //Drive back 40mm
-				return ErrorCodes::BUMPER_WALL;
-			} 
+			if (_registeredBumps > BUMPER_TRYS) return handleWallCollision();
 
 			float saveDistance = 0;
 			if (sensor.type == ReferenceObj::ENCODER) {
 				saveDistance = p_drivetrain->GetEncoderDistance();
 			}
 
-			if (digitalRead(BUMPER_LEFT_PIN) && digitalRead(BUMPER_RIGHT_PIN)) {	//both bumpers
-				reverseBumper(30, -40, -40);	//Drive back 5cm
-			}
-			else if (digitalRead(BUMPER_LEFT_PIN)) {	//only left bumper
-				//Reverse in S-curve
-				reverseBumper(70, -50, 50);
-				reverseBumper(40, -50, -50);
-				reverseBumper(90, 50, -50);
-			}
-			else if (digitalRead(BUMPER_RIGHT_PIN)) {	//only right bumper
-				//Reverse in S-curve
-				reverseBumper(70, 50, -50);
-				reverseBumper(40, -50, -50);
-				reverseBumper(90, -50, 50);
-			}
+			executeBumperManeuver();
 
-			startAlign();	//Align robot
-			startAdjustment();	//Adjust robot to wall
+			startAlign();
+			startAdjustment();
 
 			if (sensor.type == ReferenceObj::ENCODER) {
-				p_drivetrain->ResetEncoder(saveDistance);	//Reset Encoder
+				p_drivetrain->ResetEncoder(saveDistance);
 			}
-			integralError = 0;	//Reset integral error
-			derivativeError = 0;	//Reset derivative error
+			integralError   = 0;
+			derivativeError = 0;
 
-			return ErrorCodes::OK;	//Bumper pressed
+			return ErrorCodes::OK;
 		}
 	}
-	else return ErrorCodes::BUMPER_DISABLED;	//no bumper pressed
+	else return ErrorCodes::BUMPER_DISABLED;
 	return ErrorCodes::UNKNOWN;
 }
 #ifdef _MSC_VER
 #pragma endregion BUMPERS
 #pragma region RAMPS
 #endif
+// Updates incline/non-incline cycle counters and adjusts rampCheckDuration based on current incline reading.
+void Driving::updateInclineCounters(float incline){
+	if (!_ON_RAMP && (incline > rampThresholdAngle) && inclineCycleCounter == 0) {
+		rampStartTime = millis();
+		inclineCycleCounter++;
+		nonInclineCycleCounter = 0;
+	}
+	else if (!_ON_RAMP && (incline < -rampThresholdAngle) && inclineCycleCounter == 0) {
+		rampStartTime = millis();
+		inclineCycleCounter--;
+		nonInclineCycleCounter = 0;
+	}
+	else if (!_ON_RAMP && ((incline >= rampThresholdAngle) || (incline <= -rampThresholdAngle))) {
+		if (incline > 0) inclineCycleCounter++;
+		else             inclineCycleCounter--;
+		if      ((incline < 15)  && (incline > -15))                                            rampCheckDuration = 1000;
+		else if (((incline >= 15) && (incline < 20)) || ((incline <= -15) && (incline > -20))) rampCheckDuration = 500;
+		else if ((incline >= 20) || (incline <= -20))                                           rampCheckDuration = 200;
+	}
+	else if (!_ON_RAMP && ((incline < rampThresholdAngle) && (incline > -rampThresholdAngle)))
+		nonInclineCycleCounter++;
+}
+
+// After the confidence window expires, decides whether a ramp was detected and triggers all ramp-entry side effects.
+void Driving::evaluateRampDecision(void){
+	if (!_ON_RAMP && millis() > (rampStartTime + rampCheckDuration) && rampStartTime != 0) {
+		if (inclineCycleCounter >= nonInclineCycleCounter * rampConfidence) {
+			inclineCycleCounter = 0;
+			#ifdef DEBUG_RAMP
+			Serial.println("RAMP UP DETECTED!");
+			#endif
+			_ON_RAMP  = true;
+			_RAMP_UP   = true;
+			_RAMP_DOWN = false;
+			p_mapSys->Move(true);
+			rampStartTime       = 0;
+			rampEncoderDistance = 0;
+			rampSpeed           = rampSpeedUp;
+			disableBumpers();
+			p_drivetrain->ResetEncoder(0);
+			p_drivetrain->EnableEncoder();
+			p_colorSensing->Freeze(true);
+		}
+		else if (-inclineCycleCounter >= nonInclineCycleCounter * rampConfidence) {
+			inclineCycleCounter = 0;
+			#ifdef DEBUG_RAMP
+			Serial.println("RAMP DOWN DETECTED!");
+			#endif
+			_ON_RAMP  = true;
+			_RAMP_DOWN = true;
+			_RAMP_UP   = false;
+			if (millis() < lastSetTile + MIN_SETTILE_TIME) {
+				p_mapSys->RollbackOne();
+				Serial.println("CORRECTED RAMP DOWN!");
+			}
+			p_mapSys->Move(true);
+			rampStartTime       = 0;
+			rampEncoderDistance = 0;
+			rampSpeed           = rampSpeedDown;
+			disableBumpers();
+			p_drivetrain->ResetEncoder(0);
+			p_drivetrain->EnableEncoder();
+			p_colorSensing->Freeze(true);
+		}
+		else {
+			inclineCycleCounter    = 0;
+			nonInclineCycleCounter = 0;
+			rampStartTime          = 0;
+			rampCheckDuration      = 1000;
+			#ifdef DEBUG_RAMP
+			Serial.println("NO RAMP!");
+			Serial.println("inc: " + String(inclineCycleCounter) + " non: " + String(nonInclineCycleCounter));
+			#endif
+		}
+	}
+}
+
 ErrorCodes Driving::checkRamp(void){
     p_gyro->GetAngleAdvanced(0, GyroAxles::Axis_Z);
     float incline = -p_gyro->data.angle_car;
@@ -117,85 +197,10 @@ ErrorCodes Driving::checkRamp(void){
     // if (p_colorSensing->Freeze()) {
     //     Serial.println(String(freezeColor) + "\tZ:" + String(incline) + "\tY:" + String(sideTilt));
     // }
-	
-    //Detect Ramps
-	if (!_ON_RAMP && (incline > rampThresholdAngle) && inclineCycleCounter == 0) {
-		rampStartTime = millis();
-		inclineCycleCounter++;
-		nonInclineCycleCounter = 0;
-	}
-	else if (!_ON_RAMP && (incline < -rampThresholdAngle) && inclineCycleCounter == 0) {
-		rampStartTime = millis();
-		inclineCycleCounter--;
-		nonInclineCycleCounter = 0;
-	}
-	else if (!_ON_RAMP && ((incline >= rampThresholdAngle) || (incline <= -rampThresholdAngle)))	{
-		if (incline > 0) inclineCycleCounter++;
-		else inclineCycleCounter--;
-		if ((incline < 15) && (incline > -15)) rampCheckDuration = 1000;
-		else if (((incline >= 15) && (incline < 20)) || ((incline <= -15) && (incline > -20)))	rampCheckDuration = 500;
-		else if ((incline >= 20) || (incline <= -20))	rampCheckDuration = 200;
-	}
 
-	else if (!_ON_RAMP && ((incline < rampThresholdAngle) && (incline > -rampThresholdAngle)))
-		nonInclineCycleCounter++;
+	updateInclineCounters(incline);
+	evaluateRampDecision();
 
-	if ( !_ON_RAMP && millis() > (rampStartTime + rampCheckDuration) && rampStartTime != 0) {
-		if (inclineCycleCounter >= nonInclineCycleCounter * rampConfidence) {
-			inclineCycleCounter = 0;
-			#ifdef DEBUG_RAMP
-			Serial.println("RAMP UP DETECTED!");
-			#endif
-			_ON_RAMP = true;	//Ramp detected
-			p_mapSys->Move(true);
-			_RAMP_UP = true;	//Ramp UP detected
-			_RAMP_DOWN = false;	//Ramp DOWN not detected
-			rampStartTime = 0;	//Reset Ramp Start Time
-			rampEncoderDistance = 0;
-			rampSpeed = rampSpeedUp;
-			disableBumpers();	//Disable Bumpers
-			p_drivetrain->ResetEncoder(0);	//Reset Encoder
-			p_drivetrain->EnableEncoder();	//Enable Motor Interrupts
-			p_colorSensing->Freeze(true);
-			return ErrorCodes::OK;
-
-		}
-		else if (-inclineCycleCounter >= nonInclineCycleCounter * rampConfidence) {
-			inclineCycleCounter = 0;
-			#ifdef DEBUG_RAMP
-			Serial.println("RAMP DOWN DETECTED!");
-			#endif
-			_ON_RAMP = true;	//Ramp detected
-			
-			_RAMP_DOWN = true;	//Ramp DOWN detected
-			_RAMP_UP = false;	//Ramp UP not detected
-			if (millis() < lastSetTile + MIN_SETTILE_TIME) {	//Check if settile occured shortly before Ramp detection
-				p_mapSys->RollbackOne();
-				Serial.println("CORRECTED RAMP DOWN!");
-			}
-
-			p_mapSys->Move(true);
-			
-			rampStartTime = 0;	//Reset Ramp Start Time
-			rampEncoderDistance = 0;
-			rampSpeed = rampSpeedDown;
-			disableBumpers();	//Disable Bumpers
-			p_drivetrain->ResetEncoder(0);	//Reset Encoder
-			p_drivetrain->EnableEncoder();	//Enable Motor Interrupts
-			p_colorSensing->Freeze(true);
-			return ErrorCodes::OK;
-		}
-		else {
-    		inclineCycleCounter = 0;
-    		nonInclineCycleCounter = 0;
-    		rampStartTime = 0;
-    		rampCheckDuration = 1000;   // optional Default
-    		#ifdef DEBUG_RAMP
-    		Serial.println("NO RAMP!");
-			Serial.println("inc: " + String(inclineCycleCounter) + " non: " + String(nonInclineCycleCounter));
-    		#endif
-		}
-	}
 	return ErrorCodes::OK;
 }
 ErrorCodes Driving::finishRamp(uint8_t distance){
@@ -227,105 +232,113 @@ ErrorCodes Driving::finishRamp(uint8_t distance){
 	}
 	return ErrorCodes::OK;
 }
+// Appends the current incline reading to the sample array and tracks the peak incline.
+void Driving::recordInclineSample(float incline){
+	arr_incline[arr_incline_index] = incline;
+	arr_incline_index++;
+	if (_RAMP_UP   && incline >  maxRampIncline) maxRampIncline = incline;
+	else if (_RAMP_DOWN && incline <  maxRampIncline) maxRampIncline = incline;
+}
+
+// Applies K/d correction factors and computes RAMP_HYPOTENUSE, RAMP_HEIGHT, RAMP_LENGTH.
+void Driving::calculateRampGeometry(void){
+	if (_RAMP_UP && !_STAIR) {
+		rampEncoderDistance = rampEncoderDistance * rampUp_K + rampUp_d;
+		RAMP_ANGLE = maxRampIncline;
+		#ifdef DEBUG_RAMP
+		Serial.print("\tRAMP UP");
+		#endif
+	}
+	else if (_RAMP_DOWN && !_STAIR) {
+		rampEncoderDistance = rampEncoderDistance * rampDown_K + rampDown_d;
+		RAMP_ANGLE = maxRampIncline + 2;
+		#ifdef DEBUG_RAMP
+		Serial.print("\tRAMP DOWN");
+		#endif
+	}
+	else if (_RAMP_UP && _STAIR) {
+		rampEncoderDistance = rampEncoderDistance * stairUp_K + stairUp_d;
+		RAMP_ANGLE = avgIncline + stairUp_angle_offset;
+		#ifdef DEBUG_RAMP
+		Serial.print("\tSTAIR UP");
+		#endif
+	}
+	else if (_RAMP_DOWN && _STAIR) {
+		rampEncoderDistance = rampEncoderDistance * stairDown_K + stairDown_d;
+		RAMP_ANGLE = avgIncline + stairDown_angle_offset;
+		#ifdef DEBUG_RAMP
+		Serial.print("\tSTAIR DOWN");
+		#endif
+	}
+	else rampEncoderDistance = 0;
+
+	if (!_STAIR) rampEncoderDistance *= 0.95;
+
+	RAMP_HYPOTENUSE = rampEncoderDistance;
+	RAMP_HEIGHT     = rampEncoderDistance * sinf(RAMP_ANGLE * PI / 180.0);
+	RAMP_LENGTH     = rampEncoderDistance * cosf(RAMP_ANGLE * PI / 180.0);
+}
+
+// Classifies stair vs smooth, finalises traversal, computes geometry, resets ramp state.
+void Driving::classifyAndFinishRamp(void){
+	#ifdef DEBUG_RAMP_ARRAY
+	Serial.println("ARRAY");
+	for (uint8_t i = 0; i < arr_incline_index; i++) {
+		Serial.println(arr_incline[i]);
+	}
+	#endif
+
+	if (checkStairRamp()) {
+		finishRamp(75);
+		_STAIR = true;
+	}
+	else finishRamp(60);
+
+	for (uint16_t i = 0; i < INCLINE_ARRAY_SIZE; i++) arr_incline[i] = 0.0;
+
+	#ifdef DEBUG_RAMP
+	Serial.print("Raw: ");
+	Serial.print(rampEncoderDistance);
+	Serial.print("\tStair: ");
+	Serial.print(_STAIR);
+	#endif
+
+	calculateRampGeometry();
+
+	_RAMP_UP   = false;
+	_RAMP_DOWN = false;
+	_STAIR     = false;
+	p_colorSensing->Freeze(false);
+	arr_incline_index = 0;
+
+	#ifdef DEBUG_RAMP
+	Serial.print("\tDistance: ");
+	Serial.print(RAMP_HYPOTENUSE);
+	Serial.print("\tRamp angle: ");
+	Serial.print(RAMP_ANGLE);
+	Serial.print("\tHeight: ");
+	Serial.print(RAMP_HEIGHT);
+	Serial.print("\tLength: ");
+	Serial.println(RAMP_LENGTH);
+	#endif
+}
+
 ErrorCodes Driving::rampHandler(void){
-    if (!_ON_RAMP) checkRamp();
+    if (!_ON_RAMP) {
+		checkRamp();
+	}
 	else {
 		p_gyro->GetAngleAdvanced(0, GyroAxles::Axis_Z);
 		float incline = -p_gyro->data.angle_car;
-		arr_incline[arr_incline_index] = incline;	//Save the incline value in the array
-		arr_incline_index++;
 
+		recordInclineSample(incline);
 
-		p_gyro->GetAngleAdvanced(0, GyroAxles::Axis_Y);		
-
-		if  (_RAMP_UP && incline > maxRampIncline)	maxRampIncline = incline;	//Ramp up
-		else if (_RAMP_DOWN && incline < maxRampIncline) maxRampIncline = incline;	//Ramp down
+		p_gyro->GetAngleAdvanced(0, GyroAxles::Axis_Y);
 
 		if (incline <= 4 && incline >= -4) {
 			rampEncoderDistance = p_drivetrain->GetEncoderDistance();
-
 			endDrive();
-
-			#ifdef DEBUG_RAMP_ARRAY
-			Serial.println("ARRAY");
-			for (uint8_t i = 0; i < arr_incline_index; i++) {
-				Serial.println(arr_incline[i]);
-			}
-			#endif
-
-			if(checkStairRamp()) {
-				finishRamp(75);
-				_STAIR = true;
-			}
-			else finishRamp(60);
-			
-			
-			for (uint16_t i = 0; i < INCLINE_ARRAY_SIZE; i++) {
-				arr_incline[i] = 0.0;	//Reset the incline array
-			}
-
-			#ifdef DEBUG_RAMP
-			Serial.print("Raw: ");
-			Serial.print(rampEncoderDistance);
-
-			Serial.print("\tStair: ");
-			Serial.print(_STAIR);
-			#endif // DEBUG_RAMP	
-			
-			if (_RAMP_UP && !_STAIR) {
-				rampEncoderDistance = rampEncoderDistance * rampUp_K + rampUp_d;
-				RAMP_ANGLE = maxRampIncline;
-				#ifdef DEBUG_RAMP
-				Serial.print("\tRAMP UP");
-				#endif
-			}
-			else if (_RAMP_DOWN && !_STAIR) {
-				rampEncoderDistance = rampEncoderDistance * rampDown_K + rampDown_d;
-				RAMP_ANGLE = maxRampIncline + 2;
-				#ifdef DEBUG_RAMP
-				Serial.print("\tRAMP DOWN");
-				#endif
-			}
-			else if (_RAMP_UP && _STAIR) {
-				rampEncoderDistance = rampEncoderDistance * stairUp_K + stairUp_d;
-				RAMP_ANGLE = avgIncline + stairUp_angle_offset;
-				#ifdef DEBUG_RAMP
-				Serial.print("\tSTAIR UP");
-				#endif
-			}
-			else if (_RAMP_DOWN && _STAIR) {
-				rampEncoderDistance = rampEncoderDistance * stairDown_K + stairDown_d;
-				RAMP_ANGLE = avgIncline + stairDown_angle_offset;
-				#ifdef DEBUG_RAMP
-				Serial.print("\tSTAIR DOWN");
-				#endif
-			}
-			else rampEncoderDistance = 0;	//No Ramp detected
-
-			if (!_STAIR) rampEncoderDistance *= 0.95;
-
-			RAMP_HYPOTENUSE = rampEncoderDistance;
-			RAMP_HEIGHT = rampEncoderDistance * sinf(RAMP_ANGLE * PI / 180.0);
-			RAMP_LENGTH = rampEncoderDistance * cosf(RAMP_ANGLE * PI / 180.0);
-			
-			
-			_RAMP_UP = false;
-			_RAMP_DOWN = false;
-			_STAIR = false;
-			p_colorSensing->Freeze(false);
-			arr_incline_index = 0;	//Reset the incline array index
-
-			#ifdef DEBUG_RAMP
-			Serial.print("\tDistance: ");
-			Serial.print(RAMP_HYPOTENUSE);
-			Serial.print("\tRamp angle: ");
-			Serial.print(RAMP_ANGLE);
-			Serial.print("\tHeight: ");
-			Serial.print(RAMP_HEIGHT);
-			Serial.print("\tLength: ");
-			Serial.println(RAMP_LENGTH);
-			#endif // DEBUG_RAMP
-			
+			classifyAndFinishRamp();
 			return ErrorCodes::RAMP_END;
 		}
 	}
@@ -482,13 +495,30 @@ ErrorCodes Driving::turn180Degree(void) {
 	endTurn();	//End the turn
 	return ErrorCodes::OK;
 }
+// Picks the closer side wall, populates coeff_side/distanceFront/distanceBack, returns the chosen side.
+Driving::AlignSide Driving::selectAlignSide(void){
+	uint16_t sumDistanceLeft  = p_tof->GetRange(TofType::LEFT_BACK)  + p_tof->GetRange(TofType::LEFT_FRONT);
+	uint16_t sumDistanceRight = p_tof->GetRange(TofType::RIGHT_BACK) + p_tof->GetRange(TofType::RIGHT_FRONT);
+
+	if (sumDistanceLeft <= sumDistanceRight && p_tof->GetRange(TofType::LEFT_BACK) < 200 && p_tof->GetRange(TofType::LEFT_FRONT) < 200) {
+		distanceFront = p_tof->GetRange(TofType::LEFT_FRONT);
+		distanceBack  = p_tof->GetRange(TofType::LEFT_BACK);
+		coeff_side    = 1;
+		return AlignSide::Left;
+	}
+	else if (sumDistanceLeft > sumDistanceRight && p_tof->GetRange(TofType::RIGHT_BACK) < 200 && p_tof->GetRange(TofType::RIGHT_FRONT) < 200) {
+		distanceFront = p_tof->GetRange(TofType::RIGHT_FRONT);
+		distanceBack  = p_tof->GetRange(TofType::RIGHT_BACK);
+		coeff_side    = -1;
+		return AlignSide::Right;
+	}
+	return AlignSide::None;
+}
+
 ErrorCodes Driving::startAlign(void) {
 	p_tof->Update();
 	_TURNING = true;
 	uint32_t startTime = millis();
-
-	uint16_t sumDistanceLeft  = p_tof->GetRange(TofType::LEFT_BACK)  + p_tof->GetRange(TofType::LEFT_FRONT);
-	uint16_t sumDistanceRight = p_tof->GetRange(TofType::RIGHT_BACK) + p_tof->GetRange(TofType::RIGHT_FRONT);
 
 	#ifdef DEBUG_DRIVING
 		Serial.print("LB: "); Serial.print(p_tof->GetRange(TofType::LEFT_BACK));
@@ -497,21 +527,8 @@ ErrorCodes Driving::startAlign(void) {
 		Serial.print("\tRB: "); Serial.println(p_tof->GetRange(TofType::RIGHT_BACK));
 	#endif
 
-	// Select which side wall to align against
-	AlignSide side = AlignSide::None;
-	if (sumDistanceLeft <= sumDistanceRight && p_tof->GetRange(TofType::LEFT_BACK) < 200 && p_tof->GetRange(TofType::LEFT_FRONT) < 200) {
-		side = AlignSide::Left;
-		distanceFront = p_tof->GetRange(TofType::LEFT_FRONT);
-		distanceBack  = p_tof->GetRange(TofType::LEFT_BACK);
-		coeff_side = 1;
-	}
-	else if (sumDistanceLeft > sumDistanceRight && p_tof->GetRange(TofType::RIGHT_BACK) < 200 && p_tof->GetRange(TofType::RIGHT_FRONT) < 200) {
-		side = AlignSide::Right;
-		distanceFront = p_tof->GetRange(TofType::RIGHT_FRONT);
-		distanceBack  = p_tof->GetRange(TofType::RIGHT_BACK);
-		coeff_side = -1;
-	}
-	else {
+	AlignSide side = selectAlignSide();
+	if (side == AlignSide::None) {
 		_TURNING = false;
 		return ErrorCodes::NOT_ALIGNING;
 	}
@@ -722,12 +739,20 @@ PID_Coefficients  Driving::calculatePIDCoefficients(float loopDuration){
     #endif
 	return pid;
 }
+// Overrides front/back readings with 1023 when a ramp flag is active, then clears the flags.
+void Driving::applyRampFlagOverrides(TOF_Optimal_Value& result){
+	if (_RAMP_INFRONT)       result.front = 1023;
+	else if (_RAMP_BEHIND)   result.back  = 1023;
+	_RAMP_INFRONT = false;
+	_RAMP_BEHIND  = false;
+}
+
 TOF_Optimal_Value Driving::getOptimalSensor(bool rampDown){
     TOF_Optimal_Value result;
 	lastSensor = sensor;
 
 	result.front = p_tof->GetRange(TofType::FRONT);
-	result.back = p_tof->GetRange(TofType::BACK);
+	result.back  = p_tof->GetRange(TofType::BACK);
 
     if (_RAMP_INSTRUCTION) {
 		_RAMP_INSTRUCTION = false;
@@ -742,11 +767,7 @@ TOF_Optimal_Value Driving::getOptimalSensor(bool rampDown){
 	Serial.println(_RAMP_INFRONT);
 	#endif
 
-	//Check for ramps in front and back
-	if (_RAMP_INFRONT) result.front = 1023;	//Ramp in front
-	else if (_RAMP_BEHIND) result.back = 1023;	//Ramp in back
-	_RAMP_INFRONT = false;
-	_RAMP_BEHIND = false;
+	applyRampFlagOverrides(result);
 
 	#ifdef DEBUG_X64
 	Serial.print("front: ");
@@ -755,11 +776,11 @@ TOF_Optimal_Value Driving::getOptimalSensor(bool rampDown){
 	Serial.println(result.back);
 	#endif
 
-	if (result.front <= 850 && result.back > 550)	result.type = ReferenceObj::FRONT;
-	else if (result.front >= 850 && result.back <= 550)	result.type = ReferenceObj::BACK;
-	else if (result.front >= 850 && result.back >= 550)	result.type = ReferenceObj::ENCODER;
-	else if (result.front < result.back)	result.type = ReferenceObj::FRONT;
-	else if (result.front > result.back)	result.type = ReferenceObj::BACK;
+	if      (result.front <= 850 && result.back  >  550) result.type = ReferenceObj::FRONT;
+	else if (result.front >= 850 && result.back  <= 550) result.type = ReferenceObj::BACK;
+	else if (result.front >= 850 && result.back  >= 550) result.type = ReferenceObj::ENCODER;
+	else if (result.front <  result.back)                result.type = ReferenceObj::FRONT;
+	else if (result.front >  result.back)                result.type = ReferenceObj::BACK;
 
 	if (rampDown) result.type = ReferenceObj::ENCODER;
 
@@ -771,7 +792,7 @@ TOF_Optimal_Value Driving::getOptimalSensor(bool rampDown){
 	Serial.print(result.front);
 	Serial.print("\tBack: ");
 	Serial.println(result.back);
-    #endif // DEBUG
+    #endif
 	return result;
 }
 void Driving::OnVictimDetected(void) {
