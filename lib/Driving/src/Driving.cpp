@@ -137,9 +137,10 @@ ErrorCodes Driving::Turn180Degree(void) {
 	return ErrorCodes::OK;
 }
 
-// Picks the closer side wall, sets distanceFront/distanceBack and coeffSide as side effects.
-// Returns 1 for left, -1 for right, 0 if no usable wall found on either side.
+
 int8_t Driving::SelectAlignSide(void){
+	// Picks the closer side wall, sets distanceFront/distanceBack and coeffSide as side effects.
+	// Returns 1 for left, -1 for right, 0 if no usable wall found on either side.
 	uint16_t sumDistanceLeft  = p_tof->GetRange(TofType::LEFT_BACK)  + p_tof->GetRange(TofType::LEFT_FRONT);
 	uint16_t sumDistanceRight = p_tof->GetRange(TofType::RIGHT_BACK) + p_tof->GetRange(TofType::RIGHT_FRONT);
 
