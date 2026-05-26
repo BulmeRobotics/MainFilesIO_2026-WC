@@ -2,7 +2,7 @@
 /**
  * @name:    Driving.h
  * @date:    30.03.2026
- * @authors: Vincent Rohkamm, Florian Wiesner
+ * @authors: Florian Wiesner
  * @details: High-level motion control — PID drive, wall alignment, turn control, ramp traversal, and bumper handling.
  */
 
@@ -166,27 +166,26 @@ public:
 	 */
 	ErrorCodes reverseBlackTile(void);
 
-	//----Public data (Phase 3: becomes private with getters/setters)----
-	bool	_ON_RAMP          = false;
-	bool	_RAMP_BEHIND      = false;
-	bool	_RAMP_INFRONT     = false;
-	bool	_RAMP_INSTRUCTION = false;
-	bool	_TURNING          = true;
-	bool	_SLOW_SPEED       = false;
-	bool	_CAM_ALERT_TURN   = false;
-	bool	_CAM_VICTIM       = false;
+	//----Getters / Setters----
+	bool         IsOnRamp(void)                          const { return _ON_RAMP; }
+	void         ClearOnRamp(void)                             { _ON_RAMP = false; }
+	float        GetRampHeight(void)                     const { return RAMP_HEIGHT; }
+	float        GetRampLength(void)                     const { return RAMP_LENGTH; }
+	int16_t      GetCurrentRobotHeight(void)             const { return currentRobotHeight; }
+	void         SetCurrentRobotHeight(int16_t h)              { currentRobotHeight = h; }
+	float        GetMaxRampIncline(void)                 const { return maxRampIncline; }
+	void         SetMaxRampIncline(float v)                    { maxRampIncline = v; }
+	Orientations GetRobotTargetAngle(void)               const { return robotTargetAngle; }
+	void         SetRobotTargetAngle(Orientations a)           { robotTargetAngle = a; }
+	void         SetSlowSpeed(bool s)                          { _SLOW_SPEED = s; }
+	void         SetLastSetTile(uint32_t t)                    { lastSetTile = t; }
 
-	TOF_Optimal_Value	sensor;
-	uint16_t			nextTargetDistance;
-	uint16_t			newValue;
-	Orientations		robotTargetAngle    = Orientations::North;
-	float				integralError;
-	float				derivativeError;
-	float				maxRampIncline;
-	float				RAMP_HEIGHT         = 0.0;
-	float				RAMP_LENGTH         = 0.0;
-	int16_t				currentRobotHeight;
-	uint32_t			lastSetTile;
+	//----Victim notification----
+	/**
+	 * @brief  Called by Vcameras on victim detection. Resets PID error accumulators and
+	 *         sets the appropriate camera-alert flag based on current turn state.
+	 */
+	void OnVictimDetected(void);
 
 private:
 	//----Config constants----
@@ -252,21 +251,37 @@ private:
 	int16_t	turnSpeed_align;
 
 	//----Drive state----
+	TOF_Optimal_Value	sensor;
 	TOF_Optimal_Value	lastSensor;
 	uint32_t			startTime;
 	bool				turnTimeout;
 	uint16_t			lastTargetDistance;
 	uint8_t				partsDriven;
 	uint16_t			encoderDistance;
+	uint16_t			nextTargetDistance;
+	uint16_t			newValue;
 	uint32_t			encoderStartTime;
 	uint32_t			driveStartTime   = 0;
 	uint32_t			maxDriveTime     = 5000;
 	uint16_t			maxEncoderTime   = 3000;
 	uint16_t			maxTurnTime      = 3000;
+	uint32_t			lastSetTile;
+	Orientations		robotTargetAngle = Orientations::North;
+	bool				_TURNING         = true;
+	bool				_SLOW_SPEED      = false;
+	bool				_CAM_ALERT_TURN  = false;
+	bool				_CAM_VICTIM      = false;
 	bool				_TURN_180_DEGREE = false;
 	bool				_DRIVE_TIMEOUT   = false;
 
 	//----Ramp state----
+	bool		_ON_RAMP               = false;
+	bool		_RAMP_BEHIND           = false;
+	bool		_RAMP_INFRONT          = false;
+	bool		_RAMP_INSTRUCTION      = false;
+	bool		_RAMP_UP               = false;
+	bool		_RAMP_DOWN             = false;
+	bool		_STAIR                 = false;
 	int16_t		inclineCycleCounter    = 0;
 	uint16_t	nonInclineCycleCounter = 0;
 	uint32_t	rampStartTime          = 0;
@@ -275,14 +290,17 @@ private:
 	float		rampEncoderDistance;
 	float		RAMP_HYPOTENUSE        = 0.0;
 	float		RAMP_ANGLE             = 0.0;
+	float		RAMP_HEIGHT            = 0.0;
+	float		RAMP_LENGTH            = 0.0;
+	float		maxRampIncline;
+	int16_t		currentRobotHeight;
 	float		avgIncline             = 0.0;
 	float		arr_incline[INCLINE_ARRAY_SIZE] = { 0.0 };
 	uint16_t	arr_incline_index      = 0;
-	bool		_RAMP_UP               = false;
-	bool		_RAMP_DOWN             = false;
-	bool		_STAIR                 = false;
 
 	//----PID state----
+	float	integralError     = 0.0;
+	float	derivativeError   = 0.0;
 	float	pid_lastError     = 0.0;
 	float	correctionSpeed   = 0.0;
 	long	lastPID_timestamp = 0;
