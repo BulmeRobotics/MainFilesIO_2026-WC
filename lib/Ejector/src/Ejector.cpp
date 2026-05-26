@@ -63,14 +63,14 @@ ErrorCodes Ejector::Eject(ErrorCodes side, uint8_t amount) {
 		}
 		if(secAmount>0){
 			// eject remaining right
-			robot->turn180Degree();
+			robot->Turn180Degree();
 			for (uint8_t i = 0; i < secAmount; i++) {
 				servoRight.write(POS_OPEN_RIGHT);
 				delay(DELAY_OPEN);
 				servoRight.write(POS_CLOSED_RIGHT);
 				delay(DELAY_CLOSE);
 			}
-			robot->turn180Degree();
+			robot->Turn180Degree();
 		}
 		rLeft -= priAmount;
 		rRight -= secAmount;
@@ -90,14 +90,14 @@ ErrorCodes Ejector::Eject(ErrorCodes side, uint8_t amount) {
 		}
 		if(secAmount>0){
 			// eject remaining left
-			robot->turn180Degree();
+			robot->Turn180Degree();
 			for (uint8_t i = 0; i < secAmount; i++) {
 				servoLeft.write(POS_OPEN_LEFT);
 				delay(DELAY_OPEN);
 				servoLeft.write(POS_CLOSED_LEFT);
 				delay(DELAY_CLOSE);
 			}
-			robot->turn180Degree();
+			robot->Turn180Degree();
 		}
 		rRight -= priAmount;
 		rLeft -= secAmount;

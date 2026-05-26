@@ -165,8 +165,8 @@ while (true) {
     if (currentRunState == RunState::INITIAL) { //Initial Run Logic
       mapper.Reset();
       cam.Enable(true);
-      robot.enableBumpers();	  //Enable Bumpers
-			robot.startAlign();	      //Start Aligning
+      robot.EnableBumpers();	  //Enable Bumpers
+			robot.StartAlign();	      //Start Aligning
 			gyro.ResetAllAngles();	  //Gyro angle zero
 			robot.SetMaxRampIncline(0);
 			robot.SetCurrentRobotHeight(0);
@@ -193,41 +193,41 @@ while (true) {
       {
       case Instructionset::T_North:
       //Turn North Logic
-        robot.endDrive();
-				robot.startAdjustment();
+        robot.EndDrive();
+				robot.StartAdjustment();
 				currentRunState = RunState::TURN;
 				robot.SetRobotTargetAngle(Orientations::North);
-        robot.startTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
+        robot.StartTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 				_ROBOT_TURNING = true;
         break;
 
       case Instructionset::T_East:
         //Turn East Logic
-				robot.endDrive();
-				robot.startAdjustment();
+				robot.EndDrive();
+				robot.StartAdjustment();
 				currentRunState = RunState::TURN;
 				robot.SetRobotTargetAngle(Orientations::East);
-        robot.startTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
+        robot.StartTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 				_ROBOT_TURNING = true;
         break;
 
       case Instructionset::T_South:
         //Turn South Logic
-				robot.endDrive();
-				robot.startAdjustment();
+				robot.EndDrive();
+				robot.StartAdjustment();
 				currentRunState = RunState::TURN;
 				robot.SetRobotTargetAngle(Orientations::South);
-        robot.startTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
+        robot.StartTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 				_ROBOT_TURNING = true;
         break;
 
       case Instructionset::T_West:
         //Turn West Logic
-				robot.endDrive();
-				robot.startAdjustment();
+				robot.EndDrive();
+				robot.StartAdjustment();
 				currentRunState = RunState::TURN;
 				robot.SetRobotTargetAngle(Orientations::West);
-        robot.startTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
+        robot.StartTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 				_ROBOT_TURNING = true;
         break;
 
@@ -236,7 +236,7 @@ while (true) {
         //Blue Tile:
         if (cs.GetFloor() == TileType::blue) {
           //Stoppen
-          robot.endDrive();
+          robot.EndDrive();
           UI.ShowPopup("BLUE TILE", ErrorCodes::info);
           uint32_t time = millis();
           while(millis() <= time + 5000){
@@ -246,12 +246,12 @@ while (true) {
           //Weiterfahren
         }
         currentRunState = RunState::CHECK_DRIVE;	//Start Drive
-        robot.startDrive(false);
+        robot.StartDrive(false);
         break;
       
       case Instructionset::ramp:
         currentRunState = RunState::CHECK_DRIVE;
-        robot.startDrive(true);
+        robot.StartDrive(true);
         break;
 
       case Instructionset::MazeFinished:
@@ -268,8 +268,8 @@ while (true) {
     else if (currentRunState == RunState::CHECKPOINT_RESET) {
       //Checkpoint Reset Logic
       UI.ShowResetScreen();
-      robot.endDrive();
-      robot.disableBumpers();
+      robot.EndDrive();
+      robot.DisableBumpers();
       UI.UpdateResetProgress("disable Bump",1,4);
       cs.Freeze(true);
       cam.Enable(false);
@@ -279,8 +279,8 @@ while (true) {
       while(_CHECKPOINT != ErrorCodes::start) {delay(5); cs.Update();}
 
       delay(10);
-      robot.enableBumpers();
-      robot.startAlign();
+      robot.EnableBumpers();
+      robot.StartAlign();
 			gyro.ResetAllAngles(); //Reset Gyro => Robot has to look towards NORTH!
       UI.UpdateResetProgress("Reset Robot ",3,4);
       cs.Freeze(false);
@@ -296,8 +296,8 @@ while (true) {
     
     else if (currentRunState == RunState::TURN) {
       //Turn Logic
-      if (robot.controlTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle())) == ErrorCodes::TURNED) {
-        robot.endTurn();
+      if (robot.ControlTurn(gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle())) == ErrorCodes::TURNED) {
+        robot.EndTurn();
         _ROBOT_TURNING = false;
 				currentRunState = RunState::SETTILE;
       }
@@ -309,22 +309,22 @@ while (true) {
     
     else if (currentRunState == RunState::CHECK_DRIVE) {
       //Drive Logic
-      if(robot.checkDrive() == ErrorCodes::CHECK_RAMP) currentRunState = RunState::RAMP;
+      if(robot.CheckDrive() == ErrorCodes::CHECK_RAMP) currentRunState = RunState::RAMP;
 			else currentRunState = RunState::SCAN;
     }
 
     else if (currentRunState == RunState::RAMP) {
       //Ramp Logic
-      if(robot.rampHandler() == ErrorCodes::RAMP_END) currentRunState = RunState::SCAN;
+      if(robot.RampHandler() == ErrorCodes::RAMP_END) currentRunState = RunState::SCAN;
 			else currentRunState = RunState::DRIVE;
     }
 
     else if (currentRunState == RunState::DRIVE) {
       //Control Logic
-      ErrorCodes driveSave = robot.controlDrive((UI.GetDriveSpeed()), gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
+      ErrorCodes driveSave = robot.ControlDrive((UI.GetDriveSpeed()), gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
 			if(driveSave == ErrorCodes::CHECK_DRIVE) currentRunState = RunState::CHECK_DRIVE;
 			else if (driveSave == ErrorCodes::TIMEOUT) {
-        robot.timeoutDrive();
+        robot.TimeoutDrive();
 				currentRunState = RunState::SETTILE;
       }
 			else currentRunState = RunState::RAMP;
@@ -375,8 +375,8 @@ while (true) {
 
     else if (currentRunState == RunState::END) {
       //End of Run Logic
-      robot.endDrive();
-      robot.disableBumpers();
+      robot.EndDrive();
+      robot.DisableBumpers();
       cam.Enable(false);
       UI.LED_BUZZER_Signal(1000,1000,5);
       currentMenuState = RobotState::ABOUT;
@@ -417,14 +417,14 @@ void cyclicRunTask() {
 
   //Black Tile Handling
 	if(cs.GetFloor() == TileType::black) {
-		robot.endDrive();	//Stop Robot
+		robot.EndDrive();	//Stop Robot
 		//UI.signal.buzzer_pulse(5, 3);	//Signal BLACK
     mapper.Move(true);
 		mapper.SetTile(0x0F, TileType::black);
 		mapper.Move(false);	//Move robot Backwards
 
 		//DRIVE BACKWARDS FUNCTION
-		robot.reverseBlackTile();
+		robot.ReverseBlackTile();
 		for(uint8_t i = 0; i < 5; i++){
 			cs.Update();	//Update ColorSensors
 			delay(5);
@@ -441,7 +441,7 @@ void cyclicRunTask() {
 
   //Bumper Handling
 	if(currentRunState != RunState::INITIAL){
-		if(robot.bumperHandler() == ErrorCodes::BUMPER_WALL) currentRunState = RunState::SETTILE;
+		if(robot.BumperHandler() == ErrorCodes::BUMPER_WALL) currentRunState = RunState::SETTILE;
 	}
 }
 
