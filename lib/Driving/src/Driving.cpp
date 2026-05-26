@@ -14,6 +14,8 @@
 //#define DEBUG_TURN
 //#define DEBUG_DRIVING_1
 
+enum class AlignSide : uint8_t { Left, Right, None };
+
 #ifdef _MSC_VER
 #pragma region BUMPERS
 #endif
@@ -481,83 +483,79 @@ ErrorCodes Driving::turn180Degree(void) {
 	return ErrorCodes::OK;
 }
 ErrorCodes Driving::startAlign(void) {
-	//Reading all short TOFs on the side of the robot
-	uint16_t startTime = millis();
-	_TURNING = true;	
 	p_tof->Update();
-	uint16_t sumDistanceLeft 	= p_tof->GetRange(TofType::LEFT_BACK) + p_tof->GetRange(TofType::LEFT_FRONT);
-	uint16_t sumDistanceRight 	= p_tof->GetRange(TofType::RIGHT_BACK) + p_tof->GetRange(TofType::RIGHT_FRONT);
+	_TURNING = true;
+	uint32_t startTime = millis();
+
+	uint16_t sumDistanceLeft  = p_tof->GetRange(TofType::LEFT_BACK)  + p_tof->GetRange(TofType::LEFT_FRONT);
+	uint16_t sumDistanceRight = p_tof->GetRange(TofType::RIGHT_BACK) + p_tof->GetRange(TofType::RIGHT_FRONT);
 
 	#ifdef DEBUG_DRIVING
-		Serial.print("LB: ");
-		Serial.print(p_tof->GetRange(TofType::LEFT_BACK));
-		Serial.print("\tLF: ");
-		Serial.print(p_tof->GetRange(TofType::LEFT_FRONT));
-		Serial.print("\tRF: ");
-		Serial.print(p_tof->GetRange(TofType::RIGHT_FRONT));
-		Serial.print("\tRB: ");
-		Serial.print(p_tof->GetRange(TofType::RIGHT_BACK));
-	#endif // DEBUG_DRIVING
+		Serial.print("LB: "); Serial.print(p_tof->GetRange(TofType::LEFT_BACK));
+		Serial.print("\tLF: "); Serial.print(p_tof->GetRange(TofType::LEFT_FRONT));
+		Serial.print("\tRF: "); Serial.print(p_tof->GetRange(TofType::RIGHT_FRONT));
+		Serial.print("\tRB: "); Serial.println(p_tof->GetRange(TofType::RIGHT_BACK));
+	#endif
 
-	//deciding which side to use for the procedure
+	// Select which side wall to align against
+	AlignSide side = AlignSide::None;
 	if (sumDistanceLeft <= sumDistanceRight && p_tof->GetRange(TofType::LEFT_BACK) < 200 && p_tof->GetRange(TofType::LEFT_FRONT) < 200) {
-		side = "LEFT";
+		side = AlignSide::Left;
 		distanceFront = p_tof->GetRange(TofType::LEFT_FRONT);
-		distanceBack = p_tof->GetRange(TofType::LEFT_BACK);
+		distanceBack  = p_tof->GetRange(TofType::LEFT_BACK);
 		coeff_side = 1;
 	}
 	else if (sumDistanceLeft > sumDistanceRight && p_tof->GetRange(TofType::RIGHT_BACK) < 200 && p_tof->GetRange(TofType::RIGHT_FRONT) < 200) {
-		side = "RIGHT";
-		coeff_side = -1;
+		side = AlignSide::Right;
 		distanceFront = p_tof->GetRange(TofType::RIGHT_FRONT);
-		distanceBack = p_tof->GetRange(TofType::RIGHT_BACK);
+		distanceBack  = p_tof->GetRange(TofType::RIGHT_BACK);
+		coeff_side = -1;
 	}
-	else return ErrorCodes::NOT_ALIGNING;	//No alignment possible, no wall next to the robot
+	else {
+		_TURNING = false;
+		return ErrorCodes::NOT_ALIGNING;
+	}
 
 	#ifdef DEBUG_DRIVING
-		Serial.print("\tSide: ");
-		Serial.println(side);
-	#endif // DEBUG_DRIVING
+		Serial.print("\tSide: "); Serial.println(side == AlignSide::Left ? "LEFT" : "RIGHT");
+	#endif
 
+	// Rotate until front/back sensor pair reads equal distance to the wall
 	do {
 		p_tof->Update();
 
-		if (side == "LEFT") {
-			//read the distances
+		if (side == AlignSide::Left) {
 			distanceFront = (uint8_t)p_tof->GetRange(TofType::LEFT_FRONT);
-			distanceBack = 	(uint8_t)p_tof->GetRange(TofType::LEFT_BACK);
+			distanceBack  = (uint8_t)p_tof->GetRange(TofType::LEFT_BACK);
 		}
-		else if (side == "RIGHT") {
-			//read the distances
+		else {
 			distanceFront = (uint8_t)p_tof->GetRange(TofType::RIGHT_FRONT);
-			distanceBack = 	(uint8_t)p_tof->GetRange(TofType::RIGHT_BACK);
+			distanceBack  = (uint8_t)p_tof->GetRange(TofType::RIGHT_BACK);
 		}
 
 		if (distanceFront >= 255 || distanceBack >= 255) {
-			//stop all motors
 			p_drivetrain->Stop();
-			return ErrorCodes::NOT_ALIGNING;	//No alignment possible, no wall next to the robot
+			_TURNING = false;
+			return ErrorCodes::NOT_ALIGNING;
 		}
 
 		distanceError = distanceFront - distanceBack;
 
-		//direction of the correction, calculating the turn speed with an exponential function
-		if (distanceError > 0)	turnSpeed_align = 40.0f * (pow(EULER, (float)-distanceError / 20.0f) - 1.0f) - 20.0f;
-		else if (distanceError < 0)	turnSpeed_align = 40.0f * (1 - pow(EULER, (float)abs(distanceError) / -20.0f)) + 20.0f;
-		else  turnSpeed_align = 0;
+		if      (distanceError > 0) turnSpeed_align = 40.0f * (pow(EULER, (float)-distanceError / 20.0f) - 1.0f) - 20.0f;
+		else if (distanceError < 0) turnSpeed_align = 40.0f * (1 - pow(EULER, (float)abs(distanceError) / -20.0f)) + 20.0f;
+		else                        turnSpeed_align = 0;
 
 		#ifdef DEBUG_DRIVING
-			Serial.print("Error: " + String(distanceError));
-			Serial.println("\tSpeed: " + String(turnSpeed_align));
-		#endif // DEBUG_DRIVING
+			Serial.print("Error: "); Serial.print(distanceError);
+			Serial.print("\tSpeed: "); Serial.println(turnSpeed_align);
+		#endif
 
-		//turning the robot with the calculated speed, in first cycle = 0
-		p_drivetrain->SetSpeedLeft(turnSpeed_align * coeff_side);
+		p_drivetrain->SetSpeedLeft( turnSpeed_align * coeff_side);
 		p_drivetrain->SetSpeedRight(-turnSpeed_align * coeff_side);
 	} while (abs(distanceError) >= 5 && millis() - startTime < 1500);
-	//stoping all motors
+
 	p_drivetrain->Stop();
-	_TURNING = false;	
+	_TURNING = false;
 	return ErrorCodes::OK;
 }
 #ifdef _MSC_VER
@@ -662,14 +660,6 @@ ErrorCodes Driving::checkDrive(void) {
 		return ErrorCodes::SCAN_DRIVE;
 	}
 	else return ErrorCodes::CHECK_RAMP;
-	#ifdef DEBUG_DRIVING
-	Serial.print("Type: ");
-	Serial.print(int(sensor.type));
-	Serial.print("\tRange: ");
-	Serial.println(newValue);
-	#endif // DEBUG_DRIVING
-	return ErrorCodes::CHECK_RAMP;
-
 }
 ErrorCodes Driving::endDrive(void) {
 	lastPID_timestamp = 0;

@@ -61,7 +61,7 @@ Each library lives in `lib/<Name>/src/`. All share types from `CustomDatatypes`.
 
 - **`ErrorCodes` enum** is used as a multipurpose return type across all modules — not just for errors but also for directional/state signals (`left`, `right`, `up`, `down`, `TURNED`, `CHECK_DRIVE`, etc.). Check `CustomDatatypes.h` before adding new values.
 - **`#pragma region`** blocks guarded by `#ifdef _MSC_VER` are used throughout for Visual Studio code folding — they have no effect on compilation.
-- **Pointer injection**: modules receive pointers to their dependencies via `Init()` / `init()` calls in `main.cpp`. No global singletons except the objects declared at file scope in `main.cpp`.
+- **Pointer injection**: modules receive pointers to their dependencies via `Init()` calls in `main.cpp`. No global singletons except the objects declared at file scope in `main.cpp`.
 - **Wall bitmask convention** (`SetTile`): bit 0 = front, bit 1 = right, bit 2 = behind, bit 3 = left (relative to robot orientation). `Mapping` converts to absolute before storing.
 
 ### Hardware Pin Reference (key pins)
@@ -113,42 +113,70 @@ Rule of thumb: if the change touches more than one library or introduces a new p
 - **ISR race condition** (`main.cpp`): `currentMenuState`, `currentRunState`, `_CHECKPOINT` are written in ISRs but not declared `volatile`. At higher optimization levels the compiler may cache them in registers and the main loop will never see ISR writes.
 - **Ramp direction tautology** (`main.cpp`, `SCAN` state): `if(robot.currentRobotHeight < robot.currentRobotHeight + robot.RAMP_HEIGHT)` always reduces to `0 < RAMP_HEIGHT` — `currentRobotHeight` cancels out. Should be `if (robot.RAMP_HEIGHT > 0)` / `< 0`.
 - **Dead flag** (`main.cpp`): `_ROBOT_TURNING` is set in all four `GET_INSTRUCTIONS` turn cases but never read anywhere.
-- **Naming inconsistency**: `robot.init()` is lowercase; every other module uses `Init()`.
 - **`ErrorCodes` god-enum** (`CustomDatatypes.h`): mixes error states, cardinal directions, popup severity, ejector state, and checkpoint flow control in one enum. Long-term maintenance risk.
 
 ## Driving Library Refactor Plan
 
 The `Driving` library is functional and competition-proven but needs cleanup before the World Championship. **The logic and behavior of every method must remain identical through Phases 1–4.** Phase 5 is the only phase that intentionally changes behavior.
 
-Run `/check-style` + `fix-jsdoc` review agent after each phase. Spawn a second agent to check `main.cpp` and `Vcameras` for interface breakage after Phase 3.
+Hardware-test after each phase. Phases 1 and 3 are pure refactors — build verification is sufficient; no flash needed. Phases 2 and 4 require a hardware run.
 
-### Phase 1 — Cosmetics
-- Move debug `#define`s (`DEBUG_RAMP`, `DEBUG_DRIVING`, etc.) out of `protected:` to top of `.cpp`
-- Replace `#define` constants inside the class (`MIN_SETTILE_TIME`, `INCLINE_ARRAY_SIZE`, `reverseBumperTimeout`) with `static constexpr`
-- Add/complete JSDoc on all public methods
-- Align naming to style guide (`init` → `Init`, etc.)
+### Phase 1 — Cosmetics ✓ DONE
+- Moved debug `#define`s out of `protected:` to top of `.cpp`
+- Replaced `#define` constants with `static constexpr` (`MIN_SETTILE_TIME`, `INCLINE_ARRAY_SIZE`, `REVERSE_BUMPER_TIMEOUT`)
+- Added JSDoc file headers to `.h` and `.cpp`
+- `init` → `Init` (call site in `main.cpp` updated); removed now-empty `protected:` section
 
 ### Phase 2 — Type & correctness fixes
-- Replace `String side` with `enum class AlignSide : uint8_t { Left, Right }` — update all comparisons in `startAlign()`
-- Fix `uint16_t startTime` local variable in `startAlign()` to `uint32_t` (shadows member; overflows after ~65s)
-- Remove unreachable debug block and duplicate `return` at end of `checkDrive()`
+- `String side` → eliminated entirely: `side` becomes a **local `AlignSide` enum** inside `startAlign()` (it was already only set and consumed within that one method)
+  - `enum class AlignSide : uint8_t { Left, Right, None }` defined at top of `.cpp`
+- `uint16_t startTime` local variable in `startAlign()` → `uint32_t` (shadowed the member and overflowed after ~65 s)
+- Unreachable `Serial.print` block + duplicate `return` at end of `checkDrive()` deleted
+- Class layout: **`public:` section moved above `private:`** for readability (many private config constants made private-first unappealing)
+- All public methods verified to have complete JSDoc
 
 ### Phase 3 — Visibility cleanup
-- Audit all `public` members; move implementation internals (`integralError`, `derivativeError`, `sensor`, `nextTargetDistance`, `newValue`) to `private`
-- Rename `getOptimalSensor()` to reflect its side-effect contract: it consumes and clears `_RAMP_INFRONT`/`_RAMP_BEHIND` flags after locking out unreliable sensors
+All public data members move to `private`. Accessors added only where external code needs them.
+
+**Becomes fully private (no external access):**
+- `_RAMP_BEHIND`, `_RAMP_INFRONT`, `_RAMP_INSTRUCTION` — consumed internally by `getOptimalSensor()`
+- `_TURNING` — internal turn-state flag; external need removed by `OnVictimDetected()` (see below)
+- `_CAM_ALERT_TURN`, `_CAM_VICTIM` — set only via `OnVictimDetected()`
+- `integralError`, `derivativeError` — reset only via `OnVictimDetected()`
+- `sensor`, `nextTargetDistance`, `newValue` — purely internal drive state
+
+**Becomes private + getter only (read externally, never written from outside):**
+- `_ON_RAMP` → `IsOnRamp()`
+- `RAMP_HEIGHT` → `GetRampHeight()`
+- `RAMP_LENGTH` → `GetRampLength()`
+
+**Becomes private + getter + setter (both read and written from `main.cpp`):**
+- `currentRobotHeight` → `GetCurrentRobotHeight()` / `SetCurrentRobotHeight(int16_t)`
+- `maxRampIncline` → `GetMaxRampIncline()` / `SetMaxRampIncline(float)`
+- `robotTargetAngle` → `GetRobotTargetAngle()` / `SetRobotTargetAngle(Orientations)`
+- `_SLOW_SPEED` → `IsSlowSpeed()` / `SetSlowSpeed(bool)`
+- `lastSetTile` → `GetLastSetTile()` / `SetLastSetTile(uint32_t)`
+
+**New method replacing Vcameras' direct member access:**
+- `OnVictimDetected()` — called by `Vcameras` instead of writing members directly. Internally: resets `integralError`/`derivativeError`, then sets `_CAM_ALERT_TURN` or `_CAM_VICTIM` depending on `_TURNING`. `Vcameras.cpp` line ~257 must be updated to call this.
+
+After Phase 3, spawn a second agent to verify `main.cpp` and `Vcameras.cpp` compile cleanly with the new interface.
 
 ### Phase 4 — Method decomposition
-Break long methods into focused private helpers. No logic changes.
+Break each long method into private helpers that read like pseudocode steps. Every helper gets a one-line JSDoc. No logic changes — only reorganization. Hardware test required after this phase.
 
 | Method | Helpers to extract |
 |---|---|
-| `checkRamp()` | `updateInclineCounters(float)`, `evaluateRampDecision()` |
-| `rampHandler()` | `applyRampCorrection()`, `calculateRampGeometry()` |
-| `startAlign()` | `selectAlignSide()` (naturally absorbs the Phase 2 AlignSide change) |
+| `checkRamp()` | `updateInclineCounters(float incline)`, `evaluateRampDecision()` |
+| `rampHandler()` | `recordInclineSample(float incline)`, `classifyAndFinishRamp()`, `calculateRampGeometry()` |
+| `startAlign()` | `selectAlignSide()` → returns `AlignSide` (absorbs Phase 2 local enum) |
 | `bumperHandler()` | `executeBumperManeuver()`, `handleWallCollision()` |
 | `getOptimalSensor()` | `applyRampFlagOverrides(TOF_Optimal_Value&)` |
 
-Watch carefully: several methods have side effects at specific points in their logic (`checkRamp()` calls `p_mapSys->Move()` and `disableBumpers()` mid-detection; `controlTurn()` mutates `_CAM_ALERT_TURN`). These must land in exactly the right place in the extracted helpers.
+**Critical side-effect positions to preserve exactly:**
+- `checkRamp()` calls `p_mapSys->Move()` and `disableBumpers()` inside the ramp-detection branch — these must stay within `evaluateRampDecision()` at the exact same logical point.
+- `controlTurn()` sets `_CAM_ALERT_TURN = true` mid-turn when camera alerts — this stays in `controlTurn()` body, not moved to a helper.
+- `checkRamp()` calls `p_colorSensing->Freeze(true)` on ramp detection — stays in `evaluateRampDecision()`.
 
-### Phase 5 — PID controller rewrite
-The current PID in `controlDrive()` uses Ziegler-Nichols approximation with fixed loop duration assumptions. This phase replaces it with a cleaner implementation. **Behavior will intentionally change here** — tune on hardware after implementation.
+### Phase 5 — PID controller rewrite *(deferred to a later session)*
+Ziegler-Nichols is used **offline** to derive the P/I/D constants; those constants are then baked into the code as `static constexpr` values. The runtime loop uses a properly measured `dt` (actual elapsed milliseconds, not a fixed assumption). Anti-windup is included (integral clamped when output saturates). **Behavior will intentionally change — tune on hardware after implementation.**
