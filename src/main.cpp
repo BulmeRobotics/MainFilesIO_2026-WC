@@ -30,9 +30,8 @@
 #include <SerialSetup.h>
 #include <CustomDatatypes.h>
 
-#include <Mapping.h>
-
   //Custom Includes - Modules
+#include <Mapping.h>
 #include <UserInterface.h>
 #include <TofSensors.h>
 #include <ColorSensing.h>
