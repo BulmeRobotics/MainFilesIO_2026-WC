@@ -3,7 +3,7 @@
 * @name:    Gyro.h
 * @date:    22.05.2026
 * @authors: Florian Wiesner
-* @details: Header file for Gyro Sensor Classes (GyroBase, Gyro_BNO055, Gyro_BNO085)
+* @details: Header file for Gyro Sensor Classes (GyroBase, GyroBNO055, GyroBNO085)
 */
 
 #ifdef _MSC_VER
@@ -23,7 +23,9 @@
 class GyroBase {
 	protected:
 		//----Members----
-		float diff_x = 0, diff_y = 0, diff_z = 0;
+		float diffX = 0, diffY = 0, diffZ = 0;
+		bool _ACCEL_ENABLED   = false;
+		bool _GRAVITY_ENABLED = false;
 
 		//----Methods----
 		virtual float GetRawAngle(GyroAxles axis) = 0;
@@ -85,14 +87,14 @@ class GyroBase {
 		/**
 		* @brief  Method to get an acceleration measurement from the IMU. DISCLAIMER - not well tested.
 		* @param  axis enum to specify the axis (Axis_X, Axis_Y, Axis_Z).
-		* @return current acceleration.
+		* @return current acceleration, or 0 if the accelerometer is disabled.
 		*/
 		virtual float GetAcceleration(GyroAxles axis) = 0;
 
 		/**
 		* @brief  Method to get a gravity measurement from the IMU. DISCLAIMER - not well tested.
 		* @param  axis enum to specify the axis (Axis_X, Axis_Y, Axis_Z).
-		* @return current gravity.
+		* @return current gravity, or 0 if gravity readings are disabled.
 		*/
 		virtual float GetGravity(GyroAxles axis) = 0;
 
@@ -121,6 +123,26 @@ class GyroBase {
 		virtual int8_t GetTemp(void) = 0;
 
 		/**
+		* @brief  Enables accelerometer readings. On the BNO085 this also activates the SH2 report.
+		*/
+		virtual void EnableAccelerometer(void)  { _ACCEL_ENABLED = true;  }
+
+		/**
+		* @brief  Disables accelerometer readings. GetAcceleration() returns 0. On the BNO085 the SH2 report is stopped.
+		*/
+		virtual void DisableAccelerometer(void) { _ACCEL_ENABLED = false; }
+
+		/**
+		* @brief  Enables gravity readings. On the BNO085 this also activates the SH2 report.
+		*/
+		virtual void EnableGravity(void)        { _GRAVITY_ENABLED = true;  }
+
+		/**
+		* @brief  Disables gravity readings. GetGravity() returns 0. On the BNO085 the SH2 report is stopped.
+		*/
+		virtual void DisableGravity(void)       { _GRAVITY_ENABLED = false; }
+
+		/**
 		* @brief  Struct to store values used for control loops.
 		* @param  angle_abs absolute angle in degrees (0-360°).
 		* @param  angle_car cartesian angle in degrees (-180° to +180°)
@@ -133,60 +155,109 @@ class GyroBase {
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO055 Class //-------------------------------------------------------------------------------------------
+	#pragma region GyroBNO055 Class //-------------------------------------------------------------------------------------------
 #endif
-class Gyro_BNO055 : public GyroBase {
+class GyroBNO055 : public GyroBase {
 	private:
-		//----Configuration----
+		//----Members----
 		static constexpr uint8_t I2C_ADDRESS = 0x28;
-
-		//----Object----
 		Adafruit_BNO055 bno = Adafruit_BNO055(-1, I2C_ADDRESS, &Wire);
 
 		//----Methods----
 		float GetRawAngle(GyroAxles axis) override;
 
 	public:
-		//----Constructor----
-		Gyro_BNO055() = default;
+		GyroBNO055() = default;
 
 		//----Methods----
+		/**
+		* @brief  Initializes and configures the BNO055 IMU.
+		* @return OK if the sensor was initialized successfully. ERROR otherwise.
+		*/
 		ErrorCodes Init(void) override;
+		/**
+		* @brief  Returns the linear acceleration on the given axis.
+		* @param  axis enum to specify the axis (Axis_X, Axis_Y, Axis_Z).
+		* @return current acceleration, or 0 if the accelerometer is disabled.
+		*/
 		float GetAcceleration(GyroAxles axis) override;
+		/**
+		* @brief  Returns the gravity vector component on the given axis.
+		* @param  axis enum to specify the axis (Axis_X, Axis_Y, Axis_Z).
+		* @return current gravity, or 0 if gravity readings are disabled.
+		*/
 		float GetGravity(GyroAxles axis) override;
+		/**
+		* @brief  Returns the current temperature from the BNO055.
+		* @return temperature in °C.
+		*/
 		int8_t GetTemp(void) override;
 };
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO085 Class //-------------------------------------------------------------------------------------------
+	#pragma region GyroBNO085 Class //-------------------------------------------------------------------------------------------
 #endif
-class Gyro_BNO085 : public GyroBase {
+/**
+* @warning  Do not use GyroBNO085 for the robot. Reading results requires draining the SH2 event
+*           queue on every call (PollEvents), which has inconsistent timing and is measurably
+*           slower than the BNO055 polling path. Use GyroBNO055 instead.
+*/
+class GyroBNO085 : public GyroBase {
 	private:
-		//----Configuration----
-		static constexpr uint8_t I2C_ADDRESS = 0x4A;
-
-		//----Object----
-		Adafruit_BNO08x bno = Adafruit_BNO08x(-1);
-
 		//----Members----
-		float yaw_ = 0, pitch_ = 0, roll_ = 0;
-		float acc_x_ = 0, acc_y_ = 0, acc_z_ = 0;
-		float grv_x_ = 0, grv_y_ = 0, grv_z_ = 0;
+		static constexpr uint8_t I2C_ADDRESS = 0x4A;
+		Adafruit_BNO08x bno = Adafruit_BNO08x(-1);
+		float yaw = 0, pitch = 0, roll = 0;
+		float accX = 0, accY = 0, accZ = 0;
+		float grvX = 0, grvY = 0, grvZ = 0;
 
 		//----Methods----
 		void PollEvents(void);
 		float GetRawAngle(GyroAxles axis) override;
 
 	public:
-		//----Constructor----
-		Gyro_BNO085() = default;
+		GyroBNO085() = default;
 
 		//----Methods----
+		/**
+		* @brief  Initializes and configures the BNO085 IMU.
+		* @return OK if the sensor was initialized successfully. ERROR otherwise.
+		*/
 		ErrorCodes Init(void) override;
+		/**
+		* @brief  Returns the linear acceleration on the given axis.
+		* @param  axis enum to specify the axis (Axis_X, Axis_Y, Axis_Z).
+		* @return current acceleration, or 0 if the accelerometer is disabled.
+		*/
 		float GetAcceleration(GyroAxles axis) override;
+		/**
+		* @brief  Returns the gravity vector component on the given axis.
+		* @param  axis enum to specify the axis (Axis_X, Axis_Y, Axis_Z).
+		* @return current gravity, or 0 if gravity readings are disabled.
+		*/
 		float GetGravity(GyroAxles axis) override;
+		/**
+		* @brief  Returns 0; temperature reading is not implemented on the BNO085.
+		* @return 0.
+		*/
 		int8_t GetTemp(void) override;
+		/**
+		* @brief  Enables accelerometer readings and activates the SH2 accelerometer report.
+		*/
+		void EnableAccelerometer(void) override;
+		/**
+		* @brief  Disables accelerometer readings and stops the SH2 accelerometer report.
+		*/
+		void DisableAccelerometer(void) override;
+		/**
+		* @brief  Enables gravity readings and activates the SH2 gravity report.
+		*/
+		void EnableGravity(void) override;
+		/**
+		* @brief  Disables gravity readings and stops the SH2 gravity report.
+		*/
+		void DisableGravity(void) override;
 };
 #ifdef _MSC_VER
 	#pragma endregion

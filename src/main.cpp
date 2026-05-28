@@ -50,7 +50,7 @@
 UserInterface UI(100); // Update Interval: 50ms
 EEPROM eeprom;
 ColorSensing cs/*(&Serial)*/;
-Gyro_BNO055 gyro;
+GyroBNO055 gyro;
 Ejector ejector;
 TofSensors tof;
 Mapping mapper;

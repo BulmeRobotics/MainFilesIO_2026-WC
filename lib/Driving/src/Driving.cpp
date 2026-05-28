@@ -26,14 +26,15 @@
 ErrorCodes Driving::StartTurn(float angle) {
 	registeredBumps = 0;
 
-	if (angle > 360) {
+	if (angle > 360)
 		return ErrorCodes::ERROR;
-	}
+	
 	#ifdef DEBUG_TURN
 		Serial.println("Starting turn");
 		Serial.print("TargetAngle: ");
 		Serial.println(angle);
 	#endif
+	
 	ts_startTime = millis();
 	DisableBumpers();	// Disable bumpers during turn
 
@@ -537,12 +538,9 @@ ErrorCodes Driving::FinishRamp(uint8_t distance){
 }
 
 ErrorCodes Driving::CheckRamp(void){
-	// Reads incline/side-tilt from gyro, updates counters, then evaluates ramp detection.
+	// Reads incline from gyro, updates counters, then evaluates ramp detection.
 	p_gyro->GetAngleAdvanced(0, GyroAxles::Axis_Z);
 	float incline = -p_gyro->data.angle_car;
-
-	p_gyro->GetAngleAdvanced(0, GyroAxles::Axis_Y);
-	float sideTilt = p_gyro->data.angle_car;
 
 	UpdateInclineCounters(incline);
 	EvaluateRampDecision();
@@ -659,7 +657,7 @@ void Driving::ClassifyAndFinishRamp(void){
 	Serial.print(_STAIR);
 	#endif
 
-	CalculateRampGeometry();
+	CalculateRampGeometry(_RAMP_UP, _RAMP_DOWN, _STAIR);
 
 	_RAMP_UP   = false;
 	_RAMP_DOWN = false;
@@ -679,30 +677,30 @@ void Driving::ClassifyAndFinishRamp(void){
 	#endif
 }
 
-void Driving::CalculateRampGeometry(void){
+void Driving::CalculateRampGeometry(bool rampUp, bool rampDown, bool isStair){
 	// Applies K/d correction factors and computes rampHypotenuse, rampHeight, rampLength.
-	if (_RAMP_UP && !_STAIR) {
+	if (rampUp && !isStair) {
 		rampEncoderDistance = rampEncoderDistance * RAMP_UP_K + RAMP_UP_D;
 		rampAngle = maxRampIncline;
 		#ifdef DEBUG_RAMP
 		Serial.print("\tRAMP UP");
 		#endif
 	}
-	else if (_RAMP_DOWN && !_STAIR) {
+	else if (rampDown && !isStair) {
 		rampEncoderDistance = rampEncoderDistance * RAMP_DOWN_K + RAMP_DOWN_D;
 		rampAngle = maxRampIncline + 2;
 		#ifdef DEBUG_RAMP
 		Serial.print("\tRAMP DOWN");
 		#endif
 	}
-	else if (_RAMP_UP && _STAIR) {
+	else if (rampUp && isStair) {
 		rampEncoderDistance = rampEncoderDistance * STAIR_UP_K + STAIR_UP_D;
 		rampAngle = avgIncline + STAIR_UP_ANGLE_OFFSET;
 		#ifdef DEBUG_RAMP
 		Serial.print("\tSTAIR UP");
 		#endif
 	}
-	else if (_RAMP_DOWN && _STAIR) {
+	else if (rampDown && isStair) {
 		rampEncoderDistance = rampEncoderDistance * STAIR_DOWN_K + STAIR_DOWN_D;
 		rampAngle = avgIncline + STAIR_DOWN_ANGLE_OFFSET;
 		#ifdef DEBUG_RAMP
@@ -711,7 +709,7 @@ void Driving::CalculateRampGeometry(void){
 	}
 	else rampEncoderDistance = 0;
 
-	if (!_STAIR) rampEncoderDistance *= 0.95;
+	if (!isStair) rampEncoderDistance *= 0.95;
 
 	rampHypotenuse = rampEncoderDistance;
 	rampHeight     = rampEncoderDistance * sinf(rampAngle * PI / 180.0);
@@ -819,12 +817,12 @@ void Driving::OnVictimDetected(void) {
 	else          _CAM_VICTIM     = true;
 }
 
-void Driving::Init(ColorSensing* p_colorSensing, TofSensors* p_tof, GyroBase* p_gyro, Mapping* mapSys_pointer, Vcameras* cam_pointer, Drivetrain* p_drivetrain) {
+void Driving::Init(ColorSensing* p_colorSensing, TofSensors* p_tof, GyroBase* p_gyro, Mapping* p_mapSys, Vcameras* p_cams, Drivetrain* p_drivetrain) {
 	this->p_colorSensing = p_colorSensing;
 	this->p_tof          = p_tof;
 	this->p_gyro         = p_gyro;
-	this->p_mapSys       = mapSys_pointer;
-	this->p_cams         = cam_pointer;
+	this->p_mapSys       = p_mapSys;
+	this->p_cams         = p_cams;
 	this->p_drivetrain   = p_drivetrain;
 
 	// Enable bumper input pins

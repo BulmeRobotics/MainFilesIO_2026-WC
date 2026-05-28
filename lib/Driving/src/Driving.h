@@ -40,11 +40,12 @@ class Driving {
          * @param  p_colorSensing  Pointer to the ColorSensing module.
          * @param  p_tof           Pointer to the TofSensors module.
          * @param  p_gyro          Pointer to the GyroBase module.
-         * @param  mapSys_pointer  Pointer to the Mapping module.
-         * @param  cam_pointer     Pointer to the Vcameras module.
+         * @param  p_mapSys        Pointer to the Mapping module.
+         * @param  p_cams          Pointer to the Vcameras module.
          * @param  p_drivetrain    Pointer to the Drivetrain module.
          */
-        void Init(ColorSensing* p_colorSensing, TofSensors* p_tof, GyroBase* p_gyro, Mapping* mapSys_pointer, Vcameras* cam_pointer, Drivetrain* p_drivetrain);
+        void Init(ColorSensing* p_colorSensing, TofSensors* p_tof, GyroBase* p_gyro, Mapping* p_mapSys, Vcameras* p_cams, Drivetrain* p_drivetrain);
+
         #ifdef _MSC_VER
             #pragma endregion
             #pragma region Turn
@@ -52,7 +53,7 @@ class Driving {
         /**
          * @brief  Initializes a turn to a target heading.
          * @param  angle  Target absolute angle in degrees.
-         * @return OK always.
+         * @return OK if angle is valid (≤ 360°).
          *         ERROR if angle exceeds 360°.
          */
         ErrorCodes StartTurn(float angle);
@@ -80,9 +81,10 @@ class Driving {
         /**
          * @brief  Aligns the robot parallel to the nearest side wall using the ToF sensors.
          * @return OK if alignment succeeded.
-         *         NOT_ALIGNING if no usable wall was found on either side.
+         *         NOT_ALIGNING if no usable wall was found on either side, or if a side sensor goes out of range during alignment.
          */
         ErrorCodes StartAlign(void);
+
         #ifdef _MSC_VER
             #pragma endregion
             #pragma region Drive
@@ -135,6 +137,7 @@ class Driving {
          * @return OK always.
          */
         ErrorCodes ReverseBlackTile(void);
+
         #ifdef _MSC_VER
             #pragma endregion
             #pragma region Ramps
@@ -152,6 +155,7 @@ class Driving {
          *         false if it is a smooth ramp.
          */
         bool CheckStairRamp(void);
+
         #ifdef _MSC_VER
             #pragma endregion
             #pragma region Bumpers
@@ -186,6 +190,7 @@ class Driving {
          *         UNKNOWN if no bumper event occurred.
          */
         ErrorCodes BumperHandler(void);
+
         #ifdef _MSC_VER
             #pragma endregion
             #pragma region Getters
@@ -196,6 +201,7 @@ class Driving {
         int16_t      GetCurrentRobotHeight(void) const { return currentRobotHeight; }
         float        GetMaxRampIncline(void)   const { return maxRampIncline; }
         Orientations GetRobotTargetAngle(void) const { return robotTargetAngle; }
+
         #ifdef _MSC_VER
         #pragma endregion
         #pragma region Setters
@@ -206,6 +212,7 @@ class Driving {
         void SetRobotTargetAngle(Orientations a)        { robotTargetAngle = a; }
         void SetSlowSpeed(bool s)                       { _SLOW_SPEED = s; }
         void SetLastSetTile(uint32_t t)                 { ts_lastSetTile = t; }
+
         #ifdef _MSC_VER
             #pragma endregion
             #pragma region Victim
@@ -215,12 +222,10 @@ class Driving {
          *         sets the appropriate camera-alert flag based on current turn state.
          */
         void OnVictimDetected(void);
-        #ifdef _MSC_VER
-            #pragma endregion
-        #endif
 
     private:
         #ifdef _MSC_VER
+            #pragma endregion
             #pragma region Config
         #endif
         //----Behavior constants----
@@ -367,7 +372,7 @@ class Driving {
         void        EvaluateRampDecision(void);
         void        RecordInclineSample(float incline);
         void        ClassifyAndFinishRamp(void);
-        void        CalculateRampGeometry(void);
+        void        CalculateRampGeometry(bool rampUp, bool rampDown, bool isStair);
 
         //----Bumper helpers----
         ErrorCodes  HandleWallCollision(void);

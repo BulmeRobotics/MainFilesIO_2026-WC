@@ -2,7 +2,7 @@
 * @name:    Gyro.cpp
 * @date:    22.05.2026
 * @authors: Florian Wiesner
-* @details: .cpp file for Gyro Sensor Classes (GyroBase, Gyro_BNO055, Gyro_BNO085)
+* @details: .cpp file for Gyro Sensor Classes (GyroBase, GyroBNO055, GyroBNO085)
 */
 
 //----Libraries----
@@ -13,9 +13,9 @@
 #endif
 float GyroBase::GetAngle(GyroAxles axis) {
 	float diff = 0;
-	if      (axis == GyroAxles::Axis_X) diff = diff_x;
-	else if (axis == GyroAxles::Axis_Y) diff = diff_y;
-	else if (axis == GyroAxles::Axis_Z) diff = diff_z;
+	if      (axis == GyroAxles::Axis_X) diff = diffX;
+	else if (axis == GyroAxles::Axis_Y) diff = diffY;
+	else if (axis == GyroAxles::Axis_Z) diff = diffZ;
 	else return 0;
 
 	float in = GetRawAngle(axis) + diff;
@@ -119,9 +119,9 @@ Orientations GyroBase::GetOrientationFromAngle(void) {
 	#pragma region GyroBase — Reset //--------------------------------------------------------------------------------------------
 #endif
 void GyroBase::ResetAngle(GyroAxles axis) {
-	if      (axis == GyroAxles::Axis_X) diff_x = -GetRawAngle(GyroAxles::Axis_X);
-	else if (axis == GyroAxles::Axis_Y) diff_y = -GetRawAngle(GyroAxles::Axis_Y);
-	else if (axis == GyroAxles::Axis_Z) diff_z = -GetRawAngle(GyroAxles::Axis_Z);
+	if      (axis == GyroAxles::Axis_X) diffX = -GetRawAngle(GyroAxles::Axis_X);
+	else if (axis == GyroAxles::Axis_Y) diffY = -GetRawAngle(GyroAxles::Axis_Y);
+	else if (axis == GyroAxles::Axis_Z) diffZ = -GetRawAngle(GyroAxles::Axis_Z);
 }
 
 void GyroBase::ResetAllAngles(void) {
@@ -135,29 +135,29 @@ void GyroBase::SetAngle(GyroAxles axis, float value) {
 
 	if (axis == GyroAxles::Axis_X) {
 		ResetAngle(axis);
-		diff_x = diff_x + value;
-		if (diff_x > 360) diff_x -= 360;
-		if (diff_x < 0)   diff_x += 360;
+		diffX = diffX + value;
+		if (diffX > 360) diffX -= 360;
+		if (diffX < 0)   diffX += 360;
 	}
 	else if (axis == GyroAxles::Axis_Y) {
 		ResetAngle(axis);
-		diff_y = diff_y + value;
-		if (diff_y > 360) diff_y -= 360;
-		if (diff_y < 0)   diff_y += 360;
+		diffY = diffY + value;
+		if (diffY > 360) diffY -= 360;
+		if (diffY < 0)   diffY += 360;
 	}
 	else if (axis == GyroAxles::Axis_Z) {
 		ResetAngle(axis);
-		diff_z = diff_z + value;
-		if (diff_z > 360) diff_z -= 360;
-		if (diff_z < 0)   diff_z += 360;
+		diffZ = diffZ + value;
+		if (diffZ > 360) diffZ -= 360;
+		if (diffZ < 0)   diffZ += 360;
 	}
 }
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO055 — Init //-----------------------------------------------------------------------------------------
+	#pragma region GyroBNO055 — Init //-------------------------------------------------------------------------------------------
 #endif
-ErrorCodes Gyro_BNO055::Init(void) {
+ErrorCodes GyroBNO055::Init(void) {
 	if (!bno.begin(OPERATION_MODE_IMUPLUS)) {
 		#ifdef DEBUG
 		Serial.println("Could not find a valid BNO055 sensor!");
@@ -172,9 +172,10 @@ ErrorCodes Gyro_BNO055::Init(void) {
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO055 — Accel & Gravity //------------------------------------------------------------------------------
+	#pragma region GyroBNO055 — Accel & Gravity //--------------------------------------------------------------------------------
 #endif
-float Gyro_BNO055::GetAcceleration(GyroAxles axis) {
+float GyroBNO055::GetAcceleration(GyroAxles axis) {
+	if (!_ACCEL_ENABLED) return 0;
 	sensors_event_t event;
 	bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER);
 
@@ -184,7 +185,8 @@ float Gyro_BNO055::GetAcceleration(GyroAxles axis) {
 	return 0;
 }
 
-float Gyro_BNO055::GetGravity(GyroAxles axis) {
+float GyroBNO055::GetGravity(GyroAxles axis) {
+	if (!_GRAVITY_ENABLED) return 0;
 	sensors_event_t event;
 	bno.getEvent(&event, Adafruit_BNO055::VECTOR_GRAVITY);
 
@@ -196,18 +198,18 @@ float Gyro_BNO055::GetGravity(GyroAxles axis) {
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO055 — Temp //-----------------------------------------------------------------------------------------
+	#pragma region GyroBNO055 — Temp //-------------------------------------------------------------------------------------------
 #endif
-int8_t Gyro_BNO055::GetTemp(void) {
+int8_t GyroBNO055::GetTemp(void) {
 	return bno.getTemp();
 }
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO055 — Private //--------------------------------------------------------------------------------------
+	#pragma region GyroBNO055 — Private //----------------------------------------------------------------------------------------
 #endif
 // Private method to get raw angle from sensor; not for direct use in main program
-float Gyro_BNO055::GetRawAngle(GyroAxles axis) {
+float GyroBNO055::GetRawAngle(GyroAxles axis) {
 	sensors_event_t event;
 	bno.getEvent(&event);
 
@@ -219,96 +221,126 @@ float Gyro_BNO055::GetRawAngle(GyroAxles axis) {
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO085 — Init //-----------------------------------------------------------------------------------------
+	#pragma region GyroBNO085 — Init //-------------------------------------------------------------------------------------------
 #endif
-ErrorCodes Gyro_BNO085::Init(void) {
+ErrorCodes GyroBNO085::Init(void) {
 	if (!bno.begin_I2C(I2C_ADDRESS, &Wire)) {
 		#ifdef DEBUG
 		Serial.println("Could not find a valid BNO085 sensor!");
 		#endif
 		return ErrorCodes::ERROR;
 	}
-	if (bno.wasReset()) {
-		bno.enableReport(SH2_ARVR_STABILIZED_RV, 5000);
-		bno.enableReport(SH2_ACCELEROMETER);
-		bno.enableReport(SH2_GRAVITY);
+	bno.wasReset(); // clear reset flag set by begin_I2C
+	bno.enableReport(SH2_GAME_ROTATION_VECTOR);
+
+	// Actively poll until first valid orientation packet arrives
+	sh2_SensorValue_t val;
+	uint32_t deadline = millis() + 2000;
+	while (millis() < deadline) {
+		if (bno.getSensorEvent(&val) && val.sensorId == SH2_GAME_ROTATION_VECTOR) break;
+		delay(1);
 	}
-	delay(500);
 	ResetAllAngles();
 	return ErrorCodes::OK;
 }
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO085 — Accel & Gravity //------------------------------------------------------------------------------
+	#pragma region GyroBNO085 — Accel & Gravity //--------------------------------------------------------------------------------
 #endif
-float Gyro_BNO085::GetAcceleration(GyroAxles axis) {
+float GyroBNO085::GetAcceleration(GyroAxles axis) {
+	if (!_ACCEL_ENABLED) return 0;
 	PollEvents();
-	if      (axis == GyroAxles::Axis_X) return acc_x_;
-	else if (axis == GyroAxles::Axis_Y) return acc_y_;
-	else if (axis == GyroAxles::Axis_Z) return acc_z_;
+	if      (axis == GyroAxles::Axis_X) return accX;
+	else if (axis == GyroAxles::Axis_Y) return accY;
+	else if (axis == GyroAxles::Axis_Z) return accZ;
 	return 0;
 }
 
-float Gyro_BNO085::GetGravity(GyroAxles axis) {
+float GyroBNO085::GetGravity(GyroAxles axis) {
+	if (!_GRAVITY_ENABLED) return 0;
 	PollEvents();
-	if      (axis == GyroAxles::Axis_X) return grv_x_;
-	else if (axis == GyroAxles::Axis_Y) return grv_y_;
-	else if (axis == GyroAxles::Axis_Z) return grv_z_;
+	if      (axis == GyroAxles::Axis_X) return grvX;
+	else if (axis == GyroAxles::Axis_Y) return grvY;
+	else if (axis == GyroAxles::Axis_Z) return grvZ;
 	return 0;
 }
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO085 — Temp //-----------------------------------------------------------------------------------------
+	#pragma region GyroBNO085 — Temp //-------------------------------------------------------------------------------------------
 #endif
-int8_t Gyro_BNO085::GetTemp(void) {
+int8_t GyroBNO085::GetTemp(void) {
 	return 0;
 }
 
 #ifdef _MSC_VER
 	#pragma endregion
-	#pragma region Gyro_BNO085 — Private //--------------------------------------------------------------------------------------
+	#pragma region GyroBNO085 — Enable/Disable //---------------------------------------------------------------------------------
+#endif
+void GyroBNO085::EnableAccelerometer(void) {
+	GyroBase::EnableAccelerometer();
+	bno.enableReport(SH2_ACCELEROMETER, 5000);
+}
+
+void GyroBNO085::DisableAccelerometer(void) {
+	GyroBase::DisableAccelerometer();
+	bno.enableReport(SH2_ACCELEROMETER, 0);
+}
+
+void GyroBNO085::EnableGravity(void) {
+	GyroBase::EnableGravity();
+	bno.enableReport(SH2_GRAVITY, 5000);
+}
+
+void GyroBNO085::DisableGravity(void) {
+	GyroBase::DisableGravity();
+	bno.enableReport(SH2_GRAVITY, 0);
+}
+
+#ifdef _MSC_VER
+	#pragma endregion
+	#pragma region GyroBNO085 — Private //----------------------------------------------------------------------------------------
 #endif
 // Drains the BNO085 event queue and updates the per-report caches; re-enables reports on sensor reset
-void Gyro_BNO085::PollEvents(void) {
+void GyroBNO085::PollEvents(void) {
 	if (bno.wasReset()) {
-		bno.enableReport(SH2_ARVR_STABILIZED_RV, 5000);
-		bno.enableReport(SH2_ACCELEROMETER);
-		bno.enableReport(SH2_GRAVITY);
+		bno.enableReport(SH2_GAME_ROTATION_VECTOR);
+		if (_ACCEL_ENABLED)   bno.enableReport(SH2_ACCELEROMETER, 5000);
+		if (_GRAVITY_ENABLED) bno.enableReport(SH2_GRAVITY, 5000);
 	}
 
 	sh2_SensorValue_t val;
 	while (bno.getSensorEvent(&val)) {
-		if (val.sensorId == SH2_ARVR_STABILIZED_RV) {
-			float qr = val.un.arvrStabilizedRV.real;
-			float qi = val.un.arvrStabilizedRV.i;
-			float qj = val.un.arvrStabilizedRV.j;
-			float qk = val.un.arvrStabilizedRV.k;
-			yaw_   = atan2(2*(qi*qj + qk*qr),  sq(qi) - sq(qj) - sq(qk) + sq(qr)) * RAD_TO_DEG;
-			pitch_ = asin(-2*(qi*qk - qj*qr) / (sq(qi) + sq(qj) + sq(qk) + sq(qr))) * RAD_TO_DEG;
-			roll_  = atan2(2*(qj*qk + qi*qr), -sq(qi) - sq(qj) + sq(qk) + sq(qr))  * RAD_TO_DEG;
-			if (yaw_ < 0) yaw_ += 360;
+		if (val.sensorId == SH2_GAME_ROTATION_VECTOR) {
+			float qr = val.un.gameRotationVector.real;
+			float qi = val.un.gameRotationVector.i;
+			float qj = val.un.gameRotationVector.j;
+			float qk = val.un.gameRotationVector.k;
+			yaw   = atan2(2*(qi*qj + qk*qr),  sq(qi) - sq(qj) - sq(qk) + sq(qr)) * RAD_TO_DEG;
+			pitch = asin(-2*(qi*qk - qj*qr) / (sq(qi) + sq(qj) + sq(qk) + sq(qr))) * RAD_TO_DEG;
+			roll  = atan2(2*(qj*qk + qi*qr), -sq(qi) - sq(qj) + sq(qk) + sq(qr))  * RAD_TO_DEG;
+			if (yaw < 0) yaw += 360;
 		}
 		else if (val.sensorId == SH2_ACCELEROMETER) {
-			acc_x_ = val.un.accelerometer.x;
-			acc_y_ = val.un.accelerometer.y;
-			acc_z_ = val.un.accelerometer.z;
+			accX = val.un.accelerometer.x;
+			accY = val.un.accelerometer.y;
+			accZ = val.un.accelerometer.z;
 		}
 		else if (val.sensorId == SH2_GRAVITY) {
-			grv_x_ = val.un.gravity.x;
-			grv_y_ = val.un.gravity.y;
-			grv_z_ = val.un.gravity.z;
+			grvX = val.un.gravity.x;
+			grvY = val.un.gravity.y;
+			grvZ = val.un.gravity.z;
 		}
 	}
 }
 
 // Private method to get raw angle from sensor; not for direct use in main program
-float Gyro_BNO085::GetRawAngle(GyroAxles axis) {
+float GyroBNO085::GetRawAngle(GyroAxles axis) {
 	PollEvents();
-	if      (axis == GyroAxles::Axis_X) return yaw_;
-	else if (axis == GyroAxles::Axis_Y) return pitch_;
-	else if (axis == GyroAxles::Axis_Z) return roll_;
+	if      (axis == GyroAxles::Axis_X) return yaw;
+	else if (axis == GyroAxles::Axis_Y) return pitch;
+	else if (axis == GyroAxles::Axis_Z) return roll;
 	return 0;
 }
 
