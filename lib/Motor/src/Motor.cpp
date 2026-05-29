@@ -155,17 +155,17 @@ void Drivetrain::Stop(void) {
 }
 
 void Drivetrain::ResetEncoder(uint64_t value) {
-	motorLB.ResetEncoder(value);
+	encoderObj->ResetEncoder(value);
 }
 
 float Drivetrain::GetEncoderDistance(void) {
-	return motorLB.GetEncoderDistance();
+	return encoderObj->GetEncoderDistance();
 }
 
 void Drivetrain::EnableEncoder(void) {
-	motorLB.EnableEncoder();
+	encoderObj->EnableEncoder();
 }
 
 void Drivetrain::DisableEncoder(void) {
-	motorLB.DisableEncoder();
+	encoderObj->DisableEncoder();
 }

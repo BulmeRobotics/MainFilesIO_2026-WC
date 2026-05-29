@@ -135,6 +135,8 @@ class Drivetrain {
         Motor motorRF = Motor(MOTOR_RF_PWM, MOTOR_RF_DRIVER, MOTOR_RF_CW, MOTOR_RF_CCW, MOTOR_RF_ENCODER);
         Motor motorRB = Motor(MOTOR_RB_PWM, MOTOR_RB_DRIVER, MOTOR_RB_CW, MOTOR_RB_CCW, MOTOR_RB_ENCODER);
 
+        Motor* encoderObj = &motorLB;   // Choose which motor to use for the encoder
+
     public:
         //----Constructor----
         Drivetrain() = default;
