@@ -105,7 +105,7 @@ private:
     // --- Settings ---
     uint8_t UPDATE_INTERVAL; //in ms
     uint32_t lastUpdate = 0;
-    static constexpr bool _BLE_ENABLED = false;
+    static constexpr bool _BLE_ENABLED = true;
 
     uint8_t driveSpeed = 50;
 
