@@ -119,7 +119,6 @@ int main(void) {
   lastButtonPressGray = millis();
   UI.AddInfoMsg("Buttons", "OK", true);
 
-
   //----EEPROM----
   (eeprom.Init() != ErrorCodes::OK) ? UI.AddInfoMsg("EEPROM", "ERROR", false) : UI.AddInfoMsg("EEPROM", "OK", true); 
   

@@ -286,4 +286,6 @@ public:
      * @brief called to update Map on Display
      */
     void UpdateMap() { _updateMap = true; };
+
+    void UpdateToF(uint16_t RF, uint16_t RB, uint16_t LF, uint16_t LB, uint16_t FD, uint16_t FU, uint16_t BU, uint16_t BD);
 };

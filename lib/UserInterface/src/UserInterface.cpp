@@ -839,7 +839,6 @@ void UserInterface::Update(){
         GetCharge();
         DrawBattery();
     }
-    
 
     //Draw and Handle mainMenu -> Menu Selector
     if (touched && (*p_state == RobotState::SETTINGS || *p_state == RobotState::ABOUT || *p_state == RobotState::INFO_SENSOR || *p_state == RobotState::INFO_VISUAL))
@@ -855,6 +854,8 @@ void UserInterface::Update(){
 
     } else if (*p_state == RobotState::INFO_SENSOR){
         //Sensor Information
+        
+
 
     } else if(*p_state == RobotState::BOOT){
         if(touched){
@@ -966,6 +967,10 @@ ErrorCodes UserInterface::CycleDriveMode(){
 	else driveMode = ErrorCodes::straight;
 	p_mapping->SetPriority(driveMode);
     return driveMode;
+}
+
+void UserInterface::UpdateToF(uint16_t RF, uint16_t RB, uint16_t LF, uint16_t LB, uint16_t FD, uint16_t FU, uint16_t BU, uint16_t BD){
+
 }
 
 #ifdef _MSC_VER
