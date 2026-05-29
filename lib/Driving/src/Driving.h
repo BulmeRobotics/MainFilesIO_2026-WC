@@ -358,16 +358,19 @@ class Driving {
             #pragma region Helpers
         #endif
         //----Turn helpers----
-        int8_t SelectAlignSide(void);
+        int8_t  SelectAlignSide(void);
+        int16_t CalculateTurnSpeed(void);
 
         //----Drive helpers----
         TOF_Optimal_Value   GetOptimalSensor(bool rampDown);
         void                ApplyRampFlagOverrides(TOF_Optimal_Value& result);
         PID_Coefficients    CalculatePIDCoefficients(float loopDuration);
+        uint16_t            CalculateNextTargetDistance(void);
 
         //----Ramp helpers----
         ErrorCodes  FinishRamp(uint8_t distance);
         ErrorCodes  CheckRamp(void);
+        void        UpdateRampProximityFlags(void);
         void        UpdateInclineCounters(float incline);
         void        EvaluateRampDecision(void);
         void        RecordInclineSample(float incline);
