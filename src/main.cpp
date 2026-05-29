@@ -22,7 +22,7 @@
   #pragma region Includes //-----------------------------------------------------------------------
 #endif
 
-//Includes
+//----Includes----
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -47,7 +47,7 @@
   #pragma region Objects //------------------------------------------------------------------------
 #endif
 
-//Objects
+//----Objects----
 UserInterface UI(100); // Update Interval: 50ms
 EEPROM eeprom;
 ColorSensing cs/*(&Serial)*/;
@@ -66,13 +66,13 @@ BLE_UART ble;
 #pragma region Variables //----------------------------------------------------------------------
 #endif
 
-//Variables
+//----Variables----
 RobotState currentMenuState;
 RunState currentRunState;
 uint32_t lastButtonPressGray;
 uint32_t ts_lastCycle;
 
-//Flags
+//----Flags----
 bool _ROBOT_TURNING = false;
 bool _RAMP_INFRONT = false;
 bool _RAMP_BEHIND = false;
@@ -83,13 +83,12 @@ ErrorCodes _CHECKPOINT = ErrorCodes::OK;
   #pragma region Prototypes //----------------------------------------------------------------------
 #endif
 
-  //FUNKTIONEN
-  void cyclicMainTask();
-  void cyclicRunTask();
+//----Functions----
+void cyclicMainTask();
+void cyclicRunTask();
 
-  void ISR_BTN_BLACK();
-  void ISR_BTN_GRAY();
-
+void ISR_BTN_BLACK();
+void ISR_BTN_GRAY();
 
 #ifdef _MSC_VER
   #pragma endregion Functions
@@ -121,21 +120,21 @@ int main(void) {
   UI.AddInfoMsg("Buttons", "OK", true);
 
 
-  //EEPROM
+  //----EEPROM----
   eeprom.Init() != ErrorCodes::OK ? UI.AddInfoMsg("I2C", "ERROR", false) : UI.AddInfoMsg("I2C", "OK", true); 
   
-  //Color sensor
+  //----Color sensor----
   if(cs.Init(&Wire,&UI,&eeprom)!=0) UI.AddInfoMsg("Color Sensor", "ERROR", false);
   else UI.AddInfoMsg("Color Sensor", "OK", true);
   cs.EnableRead(true);
 
-  //ToF
+  //----ToF----
   if (tof.Init() == ErrorCodes::OK)
     UI.AddInfoMsg("TOF", "OK", true);
   else
     UI.AddInfoMsg("TOF", "ERROR", true);
 
-  //Gyro
+  //----Gyro----
   if (gyro.Init() == ErrorCodes::OK)
     UI.AddInfoMsg("Gyro", "OK", true);
   else
@@ -148,14 +147,16 @@ int main(void) {
   else UI.AddInfoMsg("BLE", "OK", true);
 
   //Camera
+  //----Camera----
   if(cam.Init(&ejector, &mapper, &robot, &UI, &drivetrain) != ErrorCodes::OK) UI.AddInfoMsg("Cameras", "CONN ERROR", false);
   else {UI.AddInfoMsg("Cameras", "OK", true);}
 
-  //Robot
+  //----Robot----
   robot.Init(&cs, &tof, &gyro, &mapper, &cam ,&drivetrain);
   UI.AddInfoMsg("Driving", "OK", true);
+  UI.AddInfoMsg("Drivetrain", "OK", true);
 
-  //Ejector
+  //----Ejector----
   ejector.Init(&robot);
   UI.AddInfoMsg("Ejectors", "OK", true);
 

@@ -63,19 +63,7 @@ ErrorCodes Driving::ControlTurn(float angle) {
 			Serial.print(p_gyro->data.angle_error);
 		#endif
 
-		// Calculate turn speed with an exponential function
-		int16_t turnSpeed = 0;
-		float baseSpeed = 70.0;
-		if (p_cams->IsAlert()) {
-			baseSpeed = 30.0;	// Reduce speed when camera is on alert
-			_CAM_ALERT_TURN = true;
-		}
-
-		if (p_gyro->data.direction_right)	turnSpeed = -(baseSpeed * 	(1 - pow(EULER, p_gyro->data.angle_error / 25.0)) + 20.0);
-		else if (p_gyro->data.direction_left) turnSpeed = (baseSpeed * 	(1 - pow(EULER, -p_gyro->data.angle_error / 25.0)) + 20.0);
-
-		if (!_TURN_180_DEGREE) turnSpeed = constrain(turnSpeed, -100, 100);
-		else turnSpeed = constrain(turnSpeed, -60, 60);	// Limit speed during 180° turn
+		int16_t turnSpeed = CalculateTurnSpeed();
 
 		#ifdef DEBUG_TURN
 			Serial.print("Turn speed: ");
@@ -112,19 +100,7 @@ ErrorCodes Driving::EndTurn(void){
 	p_mapSys->Turn(p_gyro->GetOrientationFromAngle());
 	_TURNING = false;
 	p_colorSensing->Freeze(false);
-	// Check for ramps in front and back
-	if (p_tof->IsRampThere(false)) {
-		_RAMP_INFRONT = true;
-		_RAMP_BEHIND  = false;
-	}
-	else if (p_tof->IsRampThere(true)) {
-		_RAMP_BEHIND  = true;
-		_RAMP_INFRONT = false;
-	}
-	else {
-		_RAMP_INFRONT = false;
-		_RAMP_BEHIND  = false;
-	}
+	UpdateRampProximityFlags();
 	return ErrorCodes::OK;
 }
 
@@ -156,6 +132,23 @@ int8_t Driving::SelectAlignSide(void){
 		return -1;
 	}
 	return 0;
+}
+
+int16_t Driving::CalculateTurnSpeed(void) {
+	// Computes exponential turn speed from gyro error. Sets _CAM_ALERT_TURN if camera is alerting.
+	int16_t turnSpeed = 0;
+	float baseSpeed = 70.0;
+	if (p_cams->IsAlert()) {
+		baseSpeed = 30.0;	// Reduce speed when camera is on alert
+		_CAM_ALERT_TURN = true;
+	}
+
+	if (p_gyro->data.direction_right)     turnSpeed = -(baseSpeed * (1 - pow(EULER,  p_gyro->data.angle_error / 25.0)) + 20.0);
+	else if (p_gyro->data.direction_left) turnSpeed =  (baseSpeed * (1 - pow(EULER, -p_gyro->data.angle_error / 25.0)) + 20.0);
+
+	if (!_TURN_180_DEGREE) turnSpeed = constrain(turnSpeed, -100, 100);
+	else                   turnSpeed = constrain(turnSpeed, -60, 60);	// Limit speed during 180° turn
+	return turnSpeed;
 }
 
 ErrorCodes Driving::StartAlign(void) {
@@ -233,15 +226,7 @@ ErrorCodes Driving::StartDrive(bool rampDown) {
 
 	sensor = GetOptimalSensor(rampDown);
 	lastTargetDistance = nextTargetDistance;
-
-	if (sensor.type == ReferenceObj::BACK)
-		if (sensor.back > 250) nextTargetDistance = sensor.back + 300;
-		else nextTargetDistance = 320;
-	else if (sensor.type == ReferenceObj::FRONT)
-		if (sensor.front > 410) nextTargetDistance = sensor.front - 300;
-		else nextTargetDistance = 110;
-	else
-		nextTargetDistance = 310;
+	nextTargetDistance = CalculateNextTargetDistance();
 
 	#ifdef DEBUG_DRIVING
 	Serial.print("Target: ");
@@ -255,6 +240,18 @@ ErrorCodes Driving::StartDrive(bool rampDown) {
 	else p_drivetrain->DisableEncoder();	// Disable encoder interrupts
 
 	return ErrorCodes::OK;
+}
+
+uint16_t Driving::CalculateNextTargetDistance(void) {
+	// Selects the stop threshold based on active reference sensor and current readings.
+	if (sensor.type == ReferenceObj::BACK)
+		if (sensor.back > 250) return sensor.back + 300;
+		else return 320;
+	else if (sensor.type == ReferenceObj::FRONT)
+		if (sensor.front > 410) return sensor.front - 300;
+		else return 110;
+	else
+		return 310;
 }
 
 ErrorCodes Driving::ControlDrive(int8_t driveSpeed, float angle) {
@@ -506,6 +503,22 @@ bool Driving::CheckStairRamp(void) {
 	}
 }
 
+void Driving::UpdateRampProximityFlags(void) {
+	// Sets _RAMP_INFRONT/_RAMP_BEHIND based on the 8×8 ToF ramp detection.
+	if (p_tof->IsRampThere(false)) {
+		_RAMP_INFRONT = true;
+		_RAMP_BEHIND  = false;
+	}
+	else if (p_tof->IsRampThere(true)) {
+		_RAMP_BEHIND  = true;
+		_RAMP_INFRONT = false;
+	}
+	else {
+		_RAMP_INFRONT = false;
+		_RAMP_BEHIND  = false;
+	}
+}
+
 ErrorCodes Driving::FinishRamp(uint8_t distance){
 	// Drives forward a fixed distance to clear the ramp end, then aligns, re-enables bumpers, and reads ramp flags.
 	p_drivetrain->ResetEncoder(0);	// Reset encoder
@@ -520,20 +533,7 @@ ErrorCodes Driving::FinishRamp(uint8_t distance){
 
 	StartAlign();		// Align robot
 	EnableBumpers();	// Re-enable bumpers after ramp traversal
-
-	// Check for ramps in front and back
-	if (p_tof->IsRampThere(false)) {
-		_RAMP_INFRONT = true;
-		_RAMP_BEHIND  = false;
-	}
-	else if (p_tof->IsRampThere(true)) {
-		_RAMP_BEHIND  = true;
-		_RAMP_INFRONT = false;
-	}
-	else {
-		_RAMP_INFRONT = false;
-		_RAMP_BEHIND  = false;
-	}
+	UpdateRampProximityFlags();
 	return ErrorCodes::OK;
 }
 
