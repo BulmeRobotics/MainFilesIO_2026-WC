@@ -354,8 +354,10 @@ void TofSensors::DisableAll(void) {
 	rightBack.Off();
 	front.Off();
 	back.Off();
-	front_x64.Off();
-	back_x64.Off();
+	frontWall.Off();
+	backWall.Off();
+	// front_x64.Off();
+	// back_x64.Off();
 }
 
 ErrorCodes TofSensors::Init(void) {
@@ -365,7 +367,8 @@ ErrorCodes TofSensors::Init(void) {
 
 	if (leftBack.Init() == true && leftFront.Init() == true && rightFront.Init() == true
 		&& rightBack.Init() == true && back.Init() == true && front.Init() == true
-		&& back_x64.Init() == true && front_x64.Init() == true)
+		&& backWall.Init() == true && frontWall.Init() == true)
+		// && back_x64.Init() == true && front_x64.Init() == true)
 		return ErrorCodes::OK;
 	else
 		return ErrorCodes::ERROR;
@@ -380,13 +383,13 @@ ErrorCodes TofSensors::Update(void) {
 	ErrorCodes errRB = rightBack.Read();
 	ErrorCodes errBU = back.Read();
 	ErrorCodes errFU = front.Read();
-	// ErrorCodes errBL = back_x64.Read();
-	// ErrorCodes errFL = front_x64.Read();
+	ErrorCodes errBL = backWall.Read();
+	ErrorCodes errFL = frontWall.Read();
 
 	if (errLB == ErrorCodes::NEW_DATA || errLF == ErrorCodes::NEW_DATA ||
 		errRF == ErrorCodes::NEW_DATA || errRB == ErrorCodes::NEW_DATA ||
-		errBU == ErrorCodes::NEW_DATA || errFU == ErrorCodes::NEW_DATA /*||
-		errBL == ErrorCodes::NEW_DATA || errFL == ErrorCodes::NEW_DATA*/)
+		errBU == ErrorCodes::NEW_DATA || errFU == ErrorCodes::NEW_DATA ||
+		errBL == ErrorCodes::NEW_DATA || errFL == ErrorCodes::NEW_DATA)
 	{
 		return ErrorCodes::NEW_DATA;
 	}
@@ -430,12 +433,12 @@ uint16_t TofSensors::GetRange(TofType sensor) {
 		return front.GetRange();
 		break;
 
-	case TofType::BACK_X64:
-		return back_x64.GetRange();
+	case TofType::BACK_WALL:
+		return backWall.GetRange();
 		break;
 
-	case TofType::FRONT_X64:
-		return front_x64.GetRange();
+	case TofType::FRONT_WALL:
+		return frontWall.GetRange();
 		break;
 
 	default:
@@ -472,12 +475,12 @@ TofStatus TofSensors::GetStatus(TofType sensor) {
 		return front.GetStatus();
 		break;
 
-	case TofType::BACK_X64:
-		return back_x64.GetStatus();
+	case TofType::BACK_WALL:
+		return backWall.GetStatus();
 		break;
 
-	case TofType::FRONT_X64:
-		return front_x64.GetStatus();
+	case TofType::FRONT_WALL:
+		return frontWall.GetStatus();
 		break;
 
 	default:
@@ -514,12 +517,12 @@ bool TofSensors::IsDataNew(TofType sensor) {
 		return front.IsDataNew();
 		break;
 
-	case TofType::BACK_X64:
-		return back_x64.IsDataNew();
+	case TofType::BACK_WALL:
+		return backWall.IsDataNew();
 		break;
 
-	case TofType::FRONT_X64:
-		return front_x64.IsDataNew();
+	case TofType::FRONT_WALL:
+		return frontWall.IsDataNew();
 		break;
 
 	default:
@@ -530,7 +533,8 @@ bool TofSensors::IsDataNew(TofType sensor) {
 
 bool TofSensors::AnyTimeoutOccured(void) {
 	if (leftBack.TimeoutOccured() || leftFront.TimeoutOccured() || rightFront.TimeoutOccured()
-		|| rightBack.TimeoutOccured() || front.TimeoutOccured() || back.TimeoutOccured())
+		|| rightBack.TimeoutOccured() || front.TimeoutOccured() || back.TimeoutOccured()
+		|| frontWall.TimeoutOccured() || backWall.TimeoutOccured())
 		return true;
 	else
 		return false;
@@ -581,10 +585,12 @@ uint8_t TofSensors::GetWalls(bool rampInfront, bool rampBehind) {
 }
 
 bool TofSensors::IsRampThere(bool side) {
-	if (!side)
-		return front_x64.IsRamp();
-	else
-		return back_x64.IsRamp();
+	// if (!side)
+	// 	return front_x64.IsRamp();
+	// else
+	// 	return back_x64.IsRamp();
+
+	return false;
 }
 
 #ifdef _MSC_VER

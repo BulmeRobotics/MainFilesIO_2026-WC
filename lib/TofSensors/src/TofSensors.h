@@ -289,30 +289,34 @@ class TofSensors {
         static constexpr uint8_t I2C_ADDRESS_MLB  = 0x68;
         static constexpr uint8_t I2C_ADDRESS_MRF  = 0x6C;
         static constexpr uint8_t I2C_ADDRESS_MRB  = 0x70;
-        static constexpr uint8_t I2C_ADDRESS_MFU  = 0x74;
-        static constexpr uint8_t I2C_ADDRESS_MBU  = 0x78;
-        static constexpr uint8_t I2C_ADDRESS_Fx64 = 0x46;
-        static constexpr uint8_t I2C_ADDRESS_Bx64 = 0x47;
+        static constexpr uint8_t I2C_ADDRESS_MF   = 0x74;
+        static constexpr uint8_t I2C_ADDRESS_MB   = 0x78;
+        static constexpr uint8_t I2C_ADDRESS_MFW  = 0x7C;
+        static constexpr uint8_t I2C_ADDRESS_MBW  = 0x80;
+        // static constexpr uint8_t I2C_ADDRESS_Fx64 = 0x46;
+        // static constexpr uint8_t I2C_ADDRESS_Bx64 = 0x47;
 
         static constexpr int XSHUT_PIN_MLF  = A2;
         static constexpr int XSHUT_PIN_MLB  = A5;
         static constexpr int XSHUT_PIN_MRF  = A3;
         static constexpr int XSHUT_PIN_MRB  = A4;
-        static constexpr int XSHUT_PIN_MFU  = A7;
-        static constexpr int XSHUT_PIN_MBU  = A6;
-        static constexpr int XSHUT_PIN_Fx64 = 32;
-        static constexpr int XSHUT_PIN_Bx64 = 26;
+        static constexpr int XSHUT_PIN_MF   = A7;
+        static constexpr int XSHUT_PIN_MB   = A6;
+        static constexpr int XSHUT_PIN_MFW  = 32;
+        static constexpr int XSHUT_PIN_MBW  = 50;
+        // static constexpr int XSHUT_PIN_Fx64 = 32;
+        // static constexpr int XSHUT_PIN_Bx64 = 26;
 
         //----Members----
         TofVL53L4CD leftBack   = TofVL53L4CD(I2C_ADDRESS_MLB, XSHUT_PIN_MLB);
         TofVL53L4CD leftFront  = TofVL53L4CD(I2C_ADDRESS_MLF, XSHUT_PIN_MLF);
         TofVL53L4CD rightFront = TofVL53L4CD(I2C_ADDRESS_MRF, XSHUT_PIN_MRF);
         TofVL53L4CD rightBack  = TofVL53L4CD(I2C_ADDRESS_MRB, XSHUT_PIN_MRB);
-        TofVL53L4CD front      = TofVL53L4CD(I2C_ADDRESS_MFU, XSHUT_PIN_MFU);
-        TofVL53L4CD back       = TofVL53L4CD(I2C_ADDRESS_MBU, XSHUT_PIN_MBU);
-        TofVL53L5CX front_x64  = TofVL53L5CX(I2C_ADDRESS_Fx64, XSHUT_PIN_Fx64);
-        TofVL53L5CX back_x64   = TofVL53L5CX(I2C_ADDRESS_Bx64, XSHUT_PIN_Bx64);
-
+        TofVL53L4CD front      = TofVL53L4CD(I2C_ADDRESS_MF, XSHUT_PIN_MF);
+        TofVL53L4CD back       = TofVL53L4CD(I2C_ADDRESS_MB, XSHUT_PIN_MB);
+        TofVL53L4CD frontWall  = TofVL53L4CD(I2C_ADDRESS_MFW, XSHUT_PIN_MFW);
+        TofVL53L4CD backWall   = TofVL53L4CD(I2C_ADDRESS_MBW, XSHUT_PIN_MBW);
+        
         bool _UPDATE_ENABLED = true;
 
         //----Methods----

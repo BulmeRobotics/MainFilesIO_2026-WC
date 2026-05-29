@@ -25,10 +25,11 @@ private:
     static constexpr unsigned long CAM_BAUD = 115200;
     static constexpr UART* CAMERA_L = &Serial2;     // D18  TX1 PD_5
 
-    static constexpr uint8_t CAMERA_PIN_INT = 40;
+    static constexpr uint8_t CAMERA_PIN_INT = 31;
 
-    static constexpr uint8_t CAMERAL_PIN_EN = 42;
-    static constexpr uint8_t CAMERAR_PIN_EN = 43;
+    static constexpr uint8_t CAMERAL_PIN_EN = 29;
+    static constexpr uint8_t CAMERAR_PIN_EN = 28;
+    // 27
 
     static constexpr uint32_t CAM_TIMEOUT = 300;
 

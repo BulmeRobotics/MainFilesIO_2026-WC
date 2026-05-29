@@ -45,9 +45,9 @@ enum class TofType : uint8_t {
     RIGHT_FRONT,
     RIGHT_BACK,
     FRONT,
-    FRONT_X64,
+    FRONT_WALL,
     BACK,
-    BACK_X64
+    BACK_WALL
 };
 
 enum class TofStatus : uint8_t{

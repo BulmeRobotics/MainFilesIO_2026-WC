@@ -106,27 +106,27 @@ class Drivetrain {
     private:
         //----Configuration----
         static constexpr uint8_t MOTOR_LB_PWM     = 13;
-        static constexpr uint8_t MOTOR_LB_CW      = 36;
-        static constexpr uint8_t MOTOR_LB_CCW     = 39;
+        static constexpr uint8_t MOTOR_LB_CW      = 39;
+        static constexpr uint8_t MOTOR_LB_CCW     = 36;
         static constexpr uint8_t MOTOR_LB_ENCODER = 5;
         static constexpr uint8_t MOTOR_LB_DRIVER  = Motor::DRIVER_A;
 
         static constexpr uint8_t MOTOR_LF_PWM     = 11;
-        static constexpr uint8_t MOTOR_LF_CW      = 36;
-        static constexpr uint8_t MOTOR_LF_CCW     = 39;
-        static constexpr uint8_t MOTOR_LF_ENCODER = 6;  // Not-existent
+        static constexpr uint8_t MOTOR_LF_CW      = 39;
+        static constexpr uint8_t MOTOR_LF_CCW     = 36;
+        static constexpr uint8_t MOTOR_LF_ENCODER = 33;
         static constexpr uint8_t MOTOR_LF_DRIVER  = Motor::DRIVER_A;
 
         static constexpr uint8_t MOTOR_RF_PWM     = 10;
-        static constexpr uint8_t MOTOR_RF_CW      = 37;
-        static constexpr uint8_t MOTOR_RF_CCW     = 38;
+        static constexpr uint8_t MOTOR_RF_CW      = 38;
+        static constexpr uint8_t MOTOR_RF_CCW     = 37;
         static constexpr uint8_t MOTOR_RF_ENCODER = 3;
         static constexpr uint8_t MOTOR_RF_DRIVER  = Motor::DRIVER_B;
 
         static constexpr uint8_t MOTOR_RB_PWM     = 9;
-        static constexpr uint8_t MOTOR_RB_CW      = 37;
-        static constexpr uint8_t MOTOR_RB_CCW     = 38;
-        static constexpr uint8_t MOTOR_RB_ENCODER = 2;  // Not-existent
+        static constexpr uint8_t MOTOR_RB_CW      = 38;
+        static constexpr uint8_t MOTOR_RB_CCW     = 37;
+        static constexpr uint8_t MOTOR_RB_ENCODER = 35;
         static constexpr uint8_t MOTOR_RB_DRIVER  = Motor::DRIVER_B;
 
         //----Members----

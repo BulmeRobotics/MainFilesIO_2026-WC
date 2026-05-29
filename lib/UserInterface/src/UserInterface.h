@@ -92,10 +92,10 @@ private:
     bool GetValidTouch(uint16_t &touchX, uint16_t &tocuhY);
 
     // --- LEDs and Buzzer ---
-    static constexpr uint8_t neoPin = 8;
+    static constexpr uint8_t neoPin = 60;
     static constexpr uint8_t pixelNum = 18;
-    static constexpr uint8_t ledPin = 56;
-    static constexpr uint8_t buzzerPin = 58;
+    static constexpr uint8_t ledPin = 61;
+    static constexpr uint8_t buzzerPin = 63;
     Adafruit_NeoPixel pixels = Adafruit_NeoPixel(pixelNum, neoPin, NEO_GRBW + NEO_KHZ800);
 
     // --- Battery Measurement ---
