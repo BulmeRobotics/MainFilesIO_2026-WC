@@ -510,17 +510,23 @@ void UserInterface::ShowCalibrationScreen(PoI_Type type){
     display.setTextColor(TEXT_COLOR);
     display.setTextSize(4);
     display.setCursor(popX + 20, popY + 20);
-    display.print("Calibrating ");
-    
-    // Name der Farbe auflösen
-    switch(type) {
-        case PoI_Type::black:      display.print("BLACK"); break;
-        case PoI_Type::blue:       display.print("BLUE"); break;
-        case PoI_Type::white:      display.print("WHITE"); break;
-        case PoI_Type::dangerZone: display.print("D-ZONE"); break;
-        case PoI_Type::red:        display.print("RED"); break;
-        case PoI_Type::checkpoint: display.print("CHECKP"); break;
-        default:                   display.print("UNKNOWN"); break;
+
+    if(type == PoI_Type::ble){
+        display.print("Connecting BLE");
+    }
+    else {
+        display.print("Calibrating ");
+        
+        // Name der Farbe auflösen
+        switch(type) {
+            case PoI_Type::black:      display.print("BLACK"); break;
+            case PoI_Type::blue:       display.print("BLUE"); break;
+            case PoI_Type::white:      display.print("WHITE"); break;
+            case PoI_Type::dangerZone: display.print("D-ZONE"); break;
+            case PoI_Type::red:        display.print("RED"); break;
+            case PoI_Type::checkpoint: display.print("CHECKP"); break;
+            default:                   display.print("UNKNOWN"); break;
+        }
     }
     
     // Trennlinie
@@ -939,12 +945,8 @@ void UserInterface::Update(){
             //BLE
             else if(btnBleConnect.IsPressed(tx,ty) && _BLE_ENABLED){
                 BuzzerSignal(5, 0, 1);
-                //Nicht in verwendung, da erst bei WM benötigt.
-            }
-
-            
-
-            
+                *p_state = RobotState::BT;
+            }            
         }
     }
 

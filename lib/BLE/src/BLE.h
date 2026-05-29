@@ -11,70 +11,69 @@
 //Standard Libraries
 #include <Arduino.h>
 #include <ArduinoBLE.h>
+#include <Stream.h>
 
 //Custom Libraries
-#include "CustomDatatypes.h"
-#include "DisplayUI.h"
+#include <CustomDatatypes.h>
+#include <UserInterface.h>
 
 
 #ifdef _MSC_VER
 #pragma endregion Includes
+#pragma region BLE Class
 #endif
 
-class BT_commObj{
-    private:
-        uint16_t timeoutTime = 0;
-        bool _ENABLE_DEBUG = false;
-        bool _ENABLE_BLE = true;
+class BLE_UART : public Stream{
+private:
+    //Settings
+    uint16_t timeoutTime;
+    bool _CONNECTED = false;
 
-        BLEDevice peripheral;
-        BLECharacteristic rxCharacteristic;
-        BLECharacteristic txCharacteristic;
-        const String serviceUUID    = "FF000000-FFFF-EEEE-99FF-123456789000"; //Service UUID for ESP32-INFO
-        #define rxUUID              "FF000000-FFFF-EEEE-99FF-123456789002" //RX UUID for ESP32-INFO
-        #define txUUID              "FF000000-FFFF-EEEE-99FF-123456789001" //TX UUID for ESP32-INFO
+    //UUIDs for Service
+    const String serviceUUID = "FF000000-FFFF-EEEE-99FF-123456789000"; //Service UUID for ESP32-INFO
+    #define rxUUID              "FF000000-FFFF-EEEE-99FF-123456789002" //RX UUID for ESP32-INFO
+    #define txUUID              "FF000000-FFFF-EEEE-99FF-123456789001" //TX UUID for ESP32-INFO
 
-        Robot_UI* p_UI = nullptr;
-    public:
-        //Constructors--------------------------------------------------------------------------------
-        BT_commObj(uint16_t timeoutTime, bool enableDEBUG, Robot_UI* UI, bool enableBLE){
-            this->p_UI = UI;
-            this->timeoutTime = timeoutTime;
-            this->_ENABLE_DEBUG = enableDEBUG;
-            this->_ENABLE_BLE = enableBLE;
-        }
-        BT_commObj(uint16_t timeoutTime, bool enableDEBUG, Robot_UI* UI){
-            this->p_UI = UI;
-            this->timeoutTime = timeoutTime;
-            this->_ENABLE_DEBUG = enableDEBUG;
-            this->_ENABLE_BLE = true;
-        }
-        BT_commObj(uint16_t timeoutTime, bool enableDEBUG){
-            this->timeoutTime = timeoutTime;
-            this->_ENABLE_DEBUG = enableDEBUG;
-            this->_ENABLE_BLE = true;
-        }
-        BT_commObj(void){
-            this->timeoutTime = 5000; //Default timeout time
-            this->_ENABLE_DEBUG = false; //Default debug state = OFF
-            this->_ENABLE_BLE = true;
-        }
+    const String LOCAL_NAME = "ESP32-INFO_BROBOT";
 
-        //Methods--------------------------------------------------------------------------------
+    //DEBUG
+    Stream* _debug_ifc = nullptr;
 
-        //@brief Initialize the Bluetooth LowEnergy communication
-        //@return ErrorCodes::OK...success, ErrorCodes::I2CError...failed to init
-        ErrorCodes init(void);
+    //Objects
+    BLEDevice peripheral;
+    BLECharacteristic rxCharacteristic;
+    BLECharacteristic txCharacteristic;
 
-        //@brief connect to a BLE peripheral, waits till connected or timeout
-        ErrorCodes connect(void);
+    UserInterface* _ui = nullptr;
 
-        //@brief write data to Peripheral
-        //@param data...data to write (uint8_t)
-        ErrorCodes writeData(uint8_t data);
+    //Ringbuffer
+    static constexpr int RX_BUFFER_SIZE = 256;
+    uint8_t _rx_buffer[RX_BUFFER_SIZE];
+    uint16_t _rx_head = 0;
+    uint16_t _rx_tail = 0;
 
-        uint8_t readData(void);
+    void pollBLE();
+    
+public:
+    BLE_UART(uint16_t timeout_ms = 5000, Stream* debugPort = nullptr) : _debug_ifc(debugPort), timeoutTime(timeout_ms) {}
 
-        //@brief check ENABLE status of BLE
-        ErrorCodes checkEN(void);
+    /**
+     * @brief Initializes BLE class.
+     * @param ui User Interface Pointer
+     * @return OK - success, else ErrorCodes
+     */
+    ErrorCodes init(UserInterface* ui = nullptr);
+
+    /**
+     * @brief tries connecting to UART Server
+     * @return success / timeout
+     */
+    ErrorCodes connect();
+
+    virtual int available() override;
+    virtual int read() override;
+    virtual int peek() override;
+    virtual size_t write(uint8_t c) override;
+    virtual size_t write(const uint8_t *buffer, size_t size) override;
+    virtual void flush() override;
 };

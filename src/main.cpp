@@ -40,6 +40,7 @@
 #include <Ejector.h>
 #include <Driving.h>
 #include <Vcameras.h>
+#include <BLE.h>
 
 #ifdef _MSC_VER
   #pragma endregion Includes
@@ -57,6 +58,8 @@ Mapping mapper;
 Drivetrain drivetrain;
 Driving robot;
 Vcameras cam;
+BLE_UART ble;
+
 
 #ifdef _MSC_VER
 #pragma endregion Objects
@@ -139,6 +142,10 @@ int main(void) {
     UI.AddInfoMsg("Gyro", "ERROR", true);
 
   UI.AddInfoMsg("Drivetrain", "OK", true);
+
+  //BLE
+  if(ble.init(&UI) == ErrorCodes::no_connection) UI.AddInfoMsg("BLE", "CONN ERROR", false);
+  else UI.AddInfoMsg("BLE", "OK", true);
 
   //Camera
   if(cam.Init(&ejector, &mapper, &robot, &UI, &drivetrain) != ErrorCodes::OK) UI.AddInfoMsg("Cameras", "CONN ERROR", false);
@@ -394,7 +401,8 @@ while (true) {
   } 
   
   else if (currentMenuState == RobotState::BT) {
-
+    ble.connect();
+    currentMenuState = RobotState::SETTINGS;
   }
 
 }

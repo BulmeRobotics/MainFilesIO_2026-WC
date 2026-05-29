@@ -102,7 +102,8 @@ enum class PoI_Type : uint8_t {
     undef = 0,
     white, blue, checkpoint, black, dangerZone,
     harmed, safe, unharmed,
-    red, yellow, green
+    red, yellow, green,
+    ble
 };
 
 enum class TileType : uint8_t {
