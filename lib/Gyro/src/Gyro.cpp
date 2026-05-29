@@ -215,7 +215,7 @@ float GyroBNO055::GetRawAngle(GyroAxles axis) {
 
 	if      (axis == GyroAxles::Axis_X) return event.orientation.x;
 	else if (axis == GyroAxles::Axis_Y) return event.orientation.y;
-	else if (axis == GyroAxles::Axis_Z) return event.orientation.z;
+	else if (axis == GyroAxles::Axis_Z) return INVERT_AXIS_Z ? -event.orientation.z : event.orientation.z;
 	return 0;
 }
 

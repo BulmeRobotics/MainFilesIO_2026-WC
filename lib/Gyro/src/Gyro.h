@@ -160,7 +160,9 @@ class GyroBase {
 class GyroBNO055 : public GyroBase {
 	private:
 		//----Members----
-		static constexpr uint8_t I2C_ADDRESS = 0x28;
+		static constexpr uint8_t I2C_ADDRESS  = 0x28;
+		// Flip to true if the IMU is mounted with Axis_Z polarity inverted (symptom: ramp-up and ramp-down detection are swapped).
+		static constexpr bool    INVERT_AXIS_Z = true;
 		Adafruit_BNO055 bno = Adafruit_BNO055(-1, I2C_ADDRESS, &Wire);
 
 		//----Methods----

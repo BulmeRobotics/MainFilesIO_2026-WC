@@ -139,11 +139,9 @@ int main(void) {
   else
     UI.AddInfoMsg("Gyro", "ERROR", true);
 
-  UI.AddInfoMsg("Drivetrain", "OK", true);
-
   //----BLE----
-  if(ble.init(&UI) == ErrorCodes::no_connection) UI.AddInfoMsg("BLE", "CONN ERROR", false);
-  else UI.AddInfoMsg("BLE", "OK", true);
+  //if(ble.init(&UI) == ErrorCodes::no_connection) UI.AddInfoMsg("BLE", "CONN ERROR", false);
+  UI.AddInfoMsg("BLE", "NOT ENABLED", false);
 
   //----Camera----
   if(cam.Init(&ejector, &mapper, &robot, &UI, &drivetrain) != ErrorCodes::OK) UI.AddInfoMsg("Cameras", "CONN ERROR", false);
