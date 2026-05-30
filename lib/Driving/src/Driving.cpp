@@ -16,7 +16,7 @@
 // #define DEBUG_X64
 // #define DEBUG_DRIVING
 // #define DEBUG_TURN
-// #define DEBUG_PID
+#define DEBUG_PID
 
 #ifdef _MSC_VER
 #pragma endregion DEBUG
@@ -221,6 +221,7 @@ ErrorCodes Driving::StartDrive(bool rampDown) {
 	registeredBumps = 0;	// Reset bump counter
 	_DRIVE_TIMEOUT = false;
 	_CAM_VICTIM = false;
+	filteredLR = 0.0f;
 	maxDriveTime = DEFAULT_MAX_DRIVE_TIME;
 	ts_driveStartTime = millis();
 
@@ -262,8 +263,9 @@ ErrorCodes Driving::ControlDrive(int8_t driveSpeed, float angle) {
 	float actualAngle = p_gyro->GetAngle(GyroAxles::Axis_X);
 	p_gyro->GetAngleAdvanced(angle, actualAngle);
 	int8_t leftRightError = p_tof->CalculateLeftRightError(p_gyro->data.angle_error, TOF_SIDE_WALL_THRESHOLD, GAP_ROBOT_WALL);
+	filteredLR = 0.7f * filteredLR + 0.3f * (float)leftRightError;
 
-	float targetAngle = angle - (leftRightError * LATERAL_TO_ANGLE_FACTOR);
+	float targetAngle = angle - (filteredLR * LATERAL_TO_ANGLE_FACTOR);
 	if (targetAngle > 360.0f) targetAngle -= 360.0f;
 	if (targetAngle < 0.0f)   targetAngle += 360.0f;
 	p_gyro->GetAngleAdvanced(targetAngle, actualAngle);
@@ -271,14 +273,15 @@ ErrorCodes Driving::ControlDrive(int8_t driveSpeed, float angle) {
 
 	// Measure dt; guard first iteration against derivative kick
 	float dt;
+	float rawDt = 0.0f;
 	if (ts_lastPID == 0) {
 		dt              = PID_DT_NOMINAL;
 		derivativeError = 0.0f;
 		pidLastError    = error;
 	}
 	else {
-		dt = (float)(millis() - ts_lastPID) / 1000.0f;
-		if (dt > 2.0f * PID_DT_NOMINAL) dt = PID_DT_NOMINAL;
+		rawDt = (float)(millis() - ts_lastPID) / 1000.0f;
+		dt    = (rawDt > 2.0f * PID_DT_NOMINAL) ? PID_DT_NOMINAL : rawDt;
 		derivativeError = (error - pidLastError) / dt;
 	}
 	pidLastError = error;
@@ -301,13 +304,14 @@ ErrorCodes Driving::ControlDrive(int8_t driveSpeed, float angle) {
 	ts_lastPID = millis();
 
 	#ifdef DEBUG_PID
-	// A=actual heading  T=biased target  LR=lateral mm  E=error(deg)  C=correction  dt=ms
+	// A=actual heading  T=biased target  LR=lateral mm  E=error(deg)  C=correction  dt=clamped ms  R=raw ms
 	Serial.print("A:"); Serial.print(actualAngle, 1);
 	Serial.print("\tT:"); Serial.print(targetAngle, 1);
-	Serial.print("\tLR:"); Serial.print(leftRightError);
+	Serial.print("\tLR:"); Serial.print(leftRightError); Serial.print("\tFLR:"); Serial.print(filteredLR, 1);
 	Serial.print("\tE:"); Serial.print(error, 2);
 	Serial.print("\tC:"); Serial.print(correctionSpeed, 2);
-	Serial.print("\tdt:"); Serial.println(dt * 1000.0f, 1);
+	Serial.print("\tdt:"); Serial.print(dt * 1000.0f, 1);
+	Serial.print("\tR:"); Serial.println(rawDt * 1000.0f, 1);
 	#endif
 
 	if (_CAM_VICTIM) maxDriveTime = 12000;

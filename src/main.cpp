@@ -17,7 +17,8 @@
 #define UPPER_LEVEL_HEIGHT 230
 #define LOWER_LEVEL_HEIGHT -100
 
-// #define PID_TUNE_MODE  // Uncomment to enable drive-forever PID tuning harness
+// #define PID_TUNE_MODE        // Uncomment to enable drive-forever PID tuning harness
+// #define DEBUG_LOOP_TIMING    // Uncomment to print per-subsystem timing in cyclicMainTask/cyclicRunTask
 
 #ifdef _MSC_VER
   #pragma endregion Defines
@@ -281,12 +282,12 @@ while (true) {
           }
           //Weiterfahren
         }
-        currentRunState = RunState::CHECK_DRIVE;	//Start Drive
+        currentRunState = RunState::DRIVE;
         robot.StartDrive(false);
         break;
-      
+
       case Instructionset::ramp:
-        currentRunState = RunState::CHECK_DRIVE;
+        currentRunState = RunState::DRIVE;
         robot.StartDrive(true);
         break;
 
@@ -343,27 +344,23 @@ while (true) {
       //Align Logic
     } 
     
-    else if (currentRunState == RunState::CHECK_DRIVE) {
-      //Drive Logic
-      if(robot.CheckDrive() == ErrorCodes::CHECK_RAMP) currentRunState = RunState::RAMP;
-			else currentRunState = RunState::SCAN;
-    }
-
-    else if (currentRunState == RunState::RAMP) {
-      //Ramp Logic
-      if(robot.RampHandler() == ErrorCodes::RAMP_END) currentRunState = RunState::SCAN;
-			else currentRunState = RunState::DRIVE;
-    }
+    // CHECK_DRIVE and RAMP states are now inlined into DRIVE so ControlDrive runs every iteration.
+    // else if (currentRunState == RunState::CHECK_DRIVE) { ... }
+    // else if (currentRunState == RunState::RAMP) { ... }
 
     else if (currentRunState == RunState::DRIVE) {
-      //Control Logic
-      ErrorCodes driveSave = robot.ControlDrive((UI.GetDriveSpeed()), gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
-			if(driveSave == ErrorCodes::CHECK_DRIVE) currentRunState = RunState::CHECK_DRIVE;
-			else if (driveSave == ErrorCodes::TIMEOUT) {
+      ErrorCodes driveSave = robot.ControlDrive(UI.GetDriveSpeed(), gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
+      if (driveSave == ErrorCodes::TIMEOUT) {
         robot.TimeoutDrive();
-				currentRunState = RunState::SETTILE;
+        currentRunState = RunState::SETTILE;
       }
-			else currentRunState = RunState::RAMP;
+      else if (robot.CheckDrive() == ErrorCodes::SCAN_DRIVE) {
+        currentRunState = RunState::SCAN;
+      }
+      else if (robot.RampHandler() == ErrorCodes::RAMP_END) {
+        currentRunState = RunState::SCAN;
+      }
+      // else: stay in DRIVE
     }
 
     else if (currentRunState == RunState::SCAN) {
@@ -449,14 +446,28 @@ return 0;
 #endif
 
 void cyclicMainTask() {
-  //Main cyclic tasks
+  #ifdef DEBUG_LOOP_TIMING
+  uint32_t _t = millis();
+  tof.Update(); Serial.print("TOF:"); Serial.print(millis() - _t); _t = millis();
+  UI.Update();  Serial.print("\tUI:");  Serial.print(millis() - _t); _t = millis();
+  cs.Update();  Serial.print("\tCS:");  Serial.println(millis() - _t);
+  #else
   tof.Update();
   UI.Update();
   cs.Update();
+  #endif
 }
 void cyclicRunTask() {
+  #ifdef DEBUG_LOOP_TIMING
+  uint32_t _t = millis();
+  uint8_t buffer = tof.GetWalls(_RAMP_INFRONT, _RAMP_BEHIND);
+  Serial.print("GW:"); Serial.print(millis() - _t); _t = millis();
+  cam.Update(cs.GetFloor() == TileType::dangerZone);
+  Serial.print("\tCAM:"); Serial.println(millis() - _t);
+  #else
   uint8_t buffer = tof.GetWalls(_RAMP_INFRONT, _RAMP_BEHIND);
   cam.Update(cs.GetFloor() == TileType::dangerZone);
+  #endif
 
   //Black Tile Handling
 	if(cs.GetFloor() == TileType::black) {

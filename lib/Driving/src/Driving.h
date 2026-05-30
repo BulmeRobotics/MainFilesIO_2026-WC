@@ -261,14 +261,15 @@ class Driving {
         static constexpr float   STAIR_DOWN_ANGLE_OFFSET = -3.5f;
 
         //----PID tuning----
-        static constexpr float PID_KP                  = 6.0f;    // ZN: 0.6 * Ku (Ku=10.0)
-        static constexpr float PID_KI                  = 40.0f;  // ZN: 2*KP/Tu (Tu=0.3s)
-        static constexpr float PID_KD                  = 0.225f; // ZN: KP*Tu/8
-        static constexpr float PID_DT_NOMINAL          = 0.025f; // fallback dt for first iteration and clamping
+        // ZN: Ku=10.0, Tu=0.3s → KP=0.6*Ku, KI=2*KP/Tu, KD=KP*Tu/8
+        static constexpr float PID_KP                  = 6.0f;
+        static constexpr float PID_KI                  = 40.0f;
+        static constexpr float PID_KD                  = 0.15f;
+        static constexpr float PID_DT_NOMINAL          = 0.035f; // clamp threshold = 70ms; passes display spikes (~60ms) through
         static constexpr float LATERAL_TO_ANGLE_FACTOR = 0.35f;  // mm lateral offset → degree heading bias
 
         //----Bumper config----
-        static constexpr uint8_t BUMPER_TRYS      = 5;
+        static constexpr uint8_t BUMPER_TRYS      = 7;
         static constexpr uint8_t BUMPER_LEFT_PIN  = 47;
         static constexpr uint8_t BUMPER_RIGHT_PIN = 45;
 
@@ -353,6 +354,7 @@ class Driving {
         float derivativeError = 0.0f;
         float pidLastError    = 0.0f;
         float correctionSpeed = 0.0f;
+        float filteredLR      = 0.0f;
         long  ts_lastPID      = 0;
         #ifdef _MSC_VER
             #pragma endregion
