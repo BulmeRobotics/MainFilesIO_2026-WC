@@ -16,6 +16,7 @@
 
 #include <CustomDatatypes.h>
 #include <Mapping.h>
+#include <Ejector.h>
 
 class ColorSensing;
 class Vcameras;
@@ -135,6 +136,7 @@ private:
     ColorSensing* p_colorSens = nullptr;
     Mapping* p_mapping = nullptr;
     Vcameras* p_camera = nullptr;
+    Ejector* p_ejector = nullptr;
 
     // --- States ---
     ErrorCodes driveMode;
@@ -216,7 +218,7 @@ public:
     /**
      * @brief Connects the other classes to the User Interface
      */
-    void ConnectPointer(RobotState* state, ColorSensing* cs, Mapping* mapping, Vcameras* camera);
+    void ConnectPointer(RobotState* state, ColorSensing* cs, Mapping* mapping, Vcameras* camera, Ejector* ejector);
 
     /**
      * @brief Adds an Information to the Message Log in startup or BLE screen

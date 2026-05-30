@@ -110,7 +110,7 @@ int main(void) {
 
   Wire1.setClock(I2C_CLOCK);
 
-  UI.ConnectPointer(&currentMenuState, &cs, &mapper, &cam);
+  UI.ConnectPointer(&currentMenuState, &cs, &mapper, &cam, &ejector);
     //Buttons
   pinMode(BUTTON_BLACK, INPUT);
   pinMode(BUTTON_GRAY, INPUT);

@@ -170,10 +170,6 @@ void UserInterface::ConstructAboutMenu(){
 void UserInterface::ConstructRunMenu() {
     display.fillScreen(BG_COLOR); // Komplettes Display schwarz für die Karte
     
-    // Trennlinie zeichnen (X = 600)
-    display.drawLine(MAP_AREA_WIDTH, 0, MAP_AREA_WIDTH, 480, HL_COLOR);
-    display.drawLine(MAP_AREA_WIDTH + 1, 0, MAP_AREA_WIDTH + 1, 480, HL_COLOR); // Bisschen dicker
-
     // Hintergrund für das rechte Panel
     display.fillRoundRect(MAP_AREA_WIDTH + 5, 5, 190, 470, 10, HL_COLOR);
 
@@ -185,11 +181,10 @@ void UserInterface::ConstructRunMenu() {
     display.setCursor(MAP_AREA_WIDTH + 15, 20);
     display.print("CAMERAS");
     display.drawLine(MAP_AREA_WIDTH + 15, 45, 780, 45, TEXT_COLOR);
-    
-    display.setCursor(MAP_AREA_WIDTH + 15, 60);
-    display.print("Left:");
-    display.setCursor(MAP_AREA_WIDTH + 15, 120);
-    display.print("Right:");
+
+        //Rescue Packs background
+    display.fillRoundRect(MAP_AREA_WIDTH + 20, 160, 160, 40, 10, 0x8410);
+    display.fillRect(MAP_AREA_WIDTH + 95,160,10,40,0x5aab);
 
     // --- Color Sensor Status ---
     display.setCursor(MAP_AREA_WIDTH + 15, 220);
@@ -207,13 +202,12 @@ void UserInterface::UpdateRunMenu() {
     bool camIsAlert = p_camera->IsAlert();
     //Kamera Alert
     if(camIsAlert != _lastCamAlert){
-        if(camIsAlert){ //Is ALERT
-            display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0xFB0C); //Green //Dark Green 0x0320
-            display.setTextColor(0x3186);// Dark Grey  //Grey 0x8410
-        } else{     //No ALERT
-            display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0x8410); //Green //Dark Green 0x0320
-            display.setTextColor(0x3186);// Dark Grey  //Grey 0x8410
-        }
+        if(camIsAlert) //Is ALERT
+         display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0xFB0C); //Green //Dark Green 0x0320
+        else     //No ALERT
+         display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0x8410); //Green //Dark Green 0x0320
+
+        display.setTextColor(0x3186);// Dark Grey  //Grey 0x8410
         display.setCursor(MAP_AREA_WIDTH + 25 + 30, 68);
         display.print("ALERT");
         _lastCamAlert = camIsAlert;
@@ -251,6 +245,17 @@ void UserInterface::UpdateRunMenu() {
         display.print(buffTxt);
     }
     
+    //Update
+    display.setTextColor(0x3186, 0x8410);
+    char buffer[2];
+    sprintf(buffer,"%1d",p_ejector->GetRemaining(ErrorCodes::left));
+    display.setCursor(646, 168);
+    display.print(buffer);
+
+    sprintf(buffer,"%1d",p_ejector->GetRemaining(ErrorCodes::right));
+    display.setCursor(736, 168);
+    display.print(buffer);
+
     // 2. COLOR SENSOR STATUS UPDATEN
     display.setTextColor(TEXT_COLOR);
     display.setCursor(MAP_AREA_WIDTH + 15, 285);
@@ -729,11 +734,12 @@ void UserInterface::Initialize(){
     driveMode = ErrorCodes::straight;
 }
 
-void UserInterface::ConnectPointer(RobotState* state, ColorSensing* cs, Mapping* mapping, Vcameras* camera){
+void UserInterface::ConnectPointer(RobotState* state, ColorSensing* cs, Mapping* mapping, Vcameras* camera, Ejector* ejector){
     p_state = state;
     p_colorSens = cs;
     p_mapping = mapping;
     p_camera = camera;
+    p_ejector = ejector;
     return;
 }
 
