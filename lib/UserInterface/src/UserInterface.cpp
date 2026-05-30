@@ -425,6 +425,22 @@ void UserInterface::ConstructSettingsMenu() {
 
 #ifdef _MSC_VER
   #pragma endregion Settings
+  #pragma region SensorInfo 
+#endif
+
+// ------------------------------------------------------------------
+// Sensor Info
+// ------------------------------------------------------------------
+
+void UserInterface::ConstructSensorInfoMenu(){
+    display.fillScreen(BG_COLOR);
+    DrawMainMenuStatic();
+    display.fillRoundRect(400,180,120,120,10,BTN_COLOR);        //"Robot"
+    display.fillTriangle(460,228,448,252,472,252,TEXT_COLOR);   //Direction
+}
+
+#ifdef _MSC_VER
+  #pragma endregion SensorInfo
   #pragma region Battery 
 #endif
 
@@ -826,6 +842,10 @@ void UserInterface::Update(){
         case RobotState::RUN:
             ConstructRunMenu();
             break;
+
+        case RobotState::INFO_SENSOR:
+            ConstructSensorInfoMenu();            
+            break;
         
         default:
             break;
@@ -855,9 +875,6 @@ void UserInterface::Update(){
         //Sensor Information
         display.setTextColor(TEXT_COLOR, BG_COLOR);
         display.setTextSize(3);
-
-        display.fillRoundRect(400,180,120,120,10,BTN_COLOR);        //"Robot"
-        display.fillTriangle(460,228,448,252,472,252,TEXT_COLOR);   //Direction
 
         //Gyro Angles
         display.setCursor(658,374);

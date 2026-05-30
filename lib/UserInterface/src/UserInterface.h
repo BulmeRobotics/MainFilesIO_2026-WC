@@ -183,6 +183,9 @@ private:
     void UpdateRunMenu();
     void DrawMap();
 
+    // -- Sensor Info --
+    void ConstructSensorInfoMenu();
+
     // @brief Draws Battery Status on Display
     void DrawBattery();
 
