@@ -260,13 +260,17 @@ class Driving {
         static constexpr float   STAIR_UP_ANGLE_OFFSET   = 3.5f;
         static constexpr float   STAIR_DOWN_ANGLE_OFFSET = -3.5f;
 
-        //----PID tuning----
-        // ZN: Ku=10.0, Tu=0.3s → KP=0.6*Ku, KI=2*KP/Tu, KD=KP*Tu/8
-        static constexpr float PID_KP                  = 6.0f;
-        static constexpr float PID_KI                  = 40.0f;
-        static constexpr float PID_KD                  = 0.15f;
-        static constexpr float PID_DT_NOMINAL          = 0.035f; // clamp threshold = 70ms; passes display spikes (~60ms) through
+        //----Drive PID tuning----
+        // ZN: Ku=10.0, Tu=0.3s → P=0.6*Ku, I=2*P/Tu, D=P*Tu/8; dt_nominal: clamp threshold = 70ms
+        static constexpr PID_Coefficients PID_DRIVE = { 6.0f, 40.0f, 0.15f, 0.035f };
         static constexpr float LATERAL_TO_ANGLE_FACTOR = 0.35f;  // mm lateral offset → degree heading bias
+
+        //----Turn PID tuning----
+        // Empirically tuned; dt_nominal: clamp threshold = 6ms (ToF disabled during turn → ~3ms loop)
+        static constexpr PID_Coefficients PID_TURN  = { 3.0f, 15.0f, 0.025f, 0.003f };
+        static constexpr int8_t  TURN_MAX_SPEED  = 90;   // normal turn ceiling
+        static constexpr int8_t  TURN_180_SPEED  = 60;   // 180° ceiling — camera frame rate limit
+        static constexpr int8_t  TURN_CAM_SPEED  = 30;   // ceiling when camera is flagging a victim
 
         //----Bumper config----
         static constexpr uint8_t BUMPER_TRYS      = 7;
@@ -349,20 +353,24 @@ class Driving {
         float    arrIncline[INCLINE_ARRAY_SIZE] = { 0.0f };
         uint16_t arrInclineIndex        = 0;
 
-        //----PID state----
+        //----Drive PID state----
         float integralError   = 0.0f;
         float derivativeError = 0.0f;
         float pidLastError    = 0.0f;
         float correctionSpeed = 0.0f;
         float filteredLR      = 0.0f;
         long  ts_lastPID      = 0;
+
+        //----Turn PID state----
+        float integralTurnError = 0.0f;
+        float turnLastError     = 0.0f;
+        long  ts_lastTurnPID    = 0;
         #ifdef _MSC_VER
             #pragma endregion
             #pragma region Helpers
         #endif
         //----Turn helpers----
         int8_t  SelectAlignSide(void);
-        int16_t CalculateTurnSpeed(void);
 
         //----Drive helpers----
         TOF_Optimal_Value   GetOptimalSensor(bool rampDown);
