@@ -120,7 +120,10 @@ ErrorCodes Driving::EndTurn(void){
 	EnableBumpers();	// Enable bumpers
 	_CAM_ALERT_TURN = false;
 	maxTurnTime = DEFAULT_MAX_TURN_TIME;
-	StartAlign();
+	if (StartAlign() == ErrorCodes::OK) {
+		Orientations aligned = p_gyro->GetOrientationFromAngle();
+		p_gyro->SetAngle(GyroAxles::Axis_X, p_gyro->GetAngleFromOrientation(aligned));
+	}
 
 	p_mapSys->Turn(p_gyro->GetOrientationFromAngle());
 	_TURNING = false;
