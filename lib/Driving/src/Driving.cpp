@@ -16,7 +16,8 @@
 // #define DEBUG_X64
 // #define DEBUG_DRIVING
 // #define DEBUG_TURN
-#define DEBUG_PID
+// #define DEBUG_PID
+// #define DEBUG_TURN_PID
 
 #ifdef _MSC_VER
 #pragma endregion DEBUG
@@ -46,6 +47,11 @@ ErrorCodes Driving::StartTurn(float angle) {
 	p_gyro->GetAngleAdvanced(angle, GyroAxles::Axis_X);	// Read gyro to determine turn direction
 	if (abs(p_gyro->data.angle_error) > 150) _TURN_180_DEGREE = true;
 	else _TURN_180_DEGREE = false;	// Flag for 180° turn speed limiting
+
+	integralTurnError = 0.0f;
+	turnLastError     = 0.0f;
+	ts_lastTurnPID    = 0;
+	p_tof->DisableUpdate();
 	return ErrorCodes::OK;
 }
 
@@ -55,22 +61,40 @@ ErrorCodes Driving::ControlTurn(float angle) {
 	if (((millis() - ts_startTime) >= maxTurnTime))	turnTimeout = true;
 	else turnTimeout = false;
 
-	if ((p_gyro->data.angle_abs >= (angle + 0.5) || (p_gyro->data.angle_abs <= (angle - 0.5))) && !turnTimeout) {
-		// Get the gyro readings and calculate the control data
+	if ((p_gyro->data.angle_abs >= (angle + 1.0) || (p_gyro->data.angle_abs <= (angle - 1.0))) && !turnTimeout) {
 		p_gyro->GetAngleAdvanced(angle, GyroAxles::Axis_X);
-		#ifdef DEBUG_TURN
-			Serial.print("Angle error: ");
-			Serial.print(p_gyro->data.angle_error);
+
+		// dt measurement
+		float dt;
+		float rawDt = 0.0f;
+		if (ts_lastTurnPID == 0) {
+			dt = PID_TURN.dt_nominal;
+		}
+		else {
+			rawDt = (float)(millis() - ts_lastTurnPID) / 1000.0f;
+			dt    = (rawDt > 2.0f * PID_TURN.dt_nominal) ? PID_TURN.dt_nominal : rawDt;
+		}
+		ts_lastTurnPID = millis();
+
+		float error      = p_gyro->data.angle_error;
+		float derivative = (error - turnLastError) / dt;
+		float rawOutput  = PID_TURN.P * error + PID_TURN.I * integralTurnError + PID_TURN.D * derivative;
+
+		int8_t limit = _CAM_ALERT_TURN ? TURN_CAM_SPEED : (_TURN_180_DEGREE ? TURN_180_SPEED : TURN_MAX_SPEED);
+		if (abs(rawOutput) < (float)limit) integralTurnError += error * dt;
+		turnLastError = error;
+
+		int16_t turnSpeed = (int16_t)constrain(rawOutput, -(float)limit, (float)limit);
+
+		#ifdef DEBUG_TURN_PID
+			Serial.print("E:"); Serial.print(error, 2);
+			Serial.print("\tI:"); Serial.print(integralTurnError, 2);
+			Serial.print("\tD:"); Serial.print(derivative, 2);
+			Serial.print("\tC:"); Serial.print(turnSpeed);
+			Serial.print("\tdt:"); Serial.print(dt * 1000.0f, 1);
+			Serial.print("\tR:"); Serial.println(rawDt * 1000.0f, 1);
 		#endif
 
-		int16_t turnSpeed = CalculateTurnSpeed();
-
-		#ifdef DEBUG_TURN
-			Serial.print("Turn speed: ");
-			Serial.println(turnSpeed);
-		#endif
-
-		// Set the speed
 		p_drivetrain->SetSpeedLeft(turnSpeed);
 		p_drivetrain->SetSpeedRight(-turnSpeed);
 	}
@@ -92,6 +116,7 @@ ErrorCodes Driving::ControlTurn(float angle) {
 }
 
 ErrorCodes Driving::EndTurn(void){
+	p_tof->EnableUpdate();
 	EnableBumpers();	// Enable bumpers
 	_CAM_ALERT_TURN = false;
 	maxTurnTime = DEFAULT_MAX_TURN_TIME;
@@ -134,22 +159,6 @@ int8_t Driving::SelectAlignSide(void){
 	return 0;
 }
 
-int16_t Driving::CalculateTurnSpeed(void) {
-	// Computes exponential turn speed from gyro error. Sets _CAM_ALERT_TURN if camera is alerting.
-	int16_t turnSpeed = 0;
-	float baseSpeed = 70.0;
-	if (p_cams->IsAlert()) {
-		baseSpeed = 30.0;	// Reduce speed when camera is on alert
-		_CAM_ALERT_TURN = true;
-	}
-
-	if (p_gyro->data.direction_right)     turnSpeed = -(baseSpeed * (1 - pow(EULER,  p_gyro->data.angle_error / 25.0)) + 20.0);
-	else if (p_gyro->data.direction_left) turnSpeed =  (baseSpeed * (1 - pow(EULER, -p_gyro->data.angle_error / 25.0)) + 20.0);
-
-	if (!_TURN_180_DEGREE) turnSpeed = constrain(turnSpeed, -100, 100);
-	else                   turnSpeed = constrain(turnSpeed, -60, 60);	// Limit speed during 180° turn
-	return turnSpeed;
-}
 
 ErrorCodes Driving::StartAlign(void) {
 	p_tof->Update();
@@ -275,13 +284,13 @@ ErrorCodes Driving::ControlDrive(int8_t driveSpeed, float angle) {
 	float dt;
 	float rawDt = 0.0f;
 	if (ts_lastPID == 0) {
-		dt              = PID_DT_NOMINAL;
+		dt              = PID_DRIVE.dt_nominal;
 		derivativeError = 0.0f;
 		pidLastError    = error;
 	}
 	else {
 		rawDt = (float)(millis() - ts_lastPID) / 1000.0f;
-		dt    = (rawDt > 2.0f * PID_DT_NOMINAL) ? PID_DT_NOMINAL : rawDt;
+		dt    = (rawDt > 2.0f * PID_DRIVE.dt_nominal) ? PID_DRIVE.dt_nominal : rawDt;
 		derivativeError = (error - pidLastError) / dt;
 	}
 	pidLastError = error;
@@ -289,7 +298,7 @@ ErrorCodes Driving::ControlDrive(int8_t driveSpeed, float angle) {
 	// Conditional anti-windup: only commit integral when output is not saturated
 	float lim              = driveSpeed * 0.33f;
 	float candidateIntegral = integralError + error * dt;
-	float output           = PID_KP * error + PID_KI * candidateIntegral + PID_KD * derivativeError;
+	float output           = PID_DRIVE.P * error + PID_DRIVE.I * candidateIntegral + PID_DRIVE.D * derivativeError;
 	if (output <= lim && output >= -lim) integralError = candidateIntegral;
 	correctionSpeed = constrain(output, -lim, lim);
 
@@ -811,10 +820,16 @@ void Driving::ExecuteBumperManeuver(void){
 #endif
 
 void Driving::OnVictimDetected(void) {
-	integralError   = 0;
-	derivativeError = 0;
-	if (_TURNING) _CAM_ALERT_TURN = true;
-	else          _CAM_VICTIM     = true;
+	integralError  = 0.0f;
+	ts_lastPID     = 0;      // force derivative restart on next ControlDrive cycle
+	if (_TURNING) {
+		_CAM_ALERT_TURN   = true;
+		integralTurnError = 0.0f; // clear integral before speed limit drops to TURN_CAM_SPEED
+		ts_lastTurnPID    = 0;    // force derivative restart on next ControlTurn cycle
+	}
+	else {
+		_CAM_VICTIM = true;
+	}
 }
 
 void Driving::Init(ColorSensing* p_colorSensing, TofSensors* p_tof, GyroBase* p_gyro, Mapping* p_mapSys, Vcameras* p_cams, Drivetrain* p_drivetrain) {
