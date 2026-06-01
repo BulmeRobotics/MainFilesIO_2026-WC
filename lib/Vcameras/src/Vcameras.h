@@ -111,12 +111,12 @@ public:
      */
     bool IsEnabled(ErrorCodes cam){
         bool enBuff = (cam == ErrorCodes::left) ? _LeftEnabled : _RightEnabled;
-        if(_debug_ifc != nullptr) {
-            _debug_ifc->print("CAM: ");
-            _debug_ifc->print((cam == ErrorCodes::left) ? "L" : "R");
-            _debug_ifc->print("  ");
-            _debug_ifc->println((enBuff) ? "En" : "Dis");
-        }
+        // if(_debug_ifc != nullptr) {
+        //     _debug_ifc->print("CAM: ");
+        //     _debug_ifc->print((cam == ErrorCodes::left) ? "L" : "R");
+        //     _debug_ifc->print("  ");
+        //     _debug_ifc->println((enBuff) ? "En" : "Dis");
+        // }
         return enBuff;
     }
 

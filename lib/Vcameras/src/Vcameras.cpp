@@ -248,7 +248,7 @@ ErrorCodes Vcameras::Update(bool onRed){
 
     //Signal Victim
     char buffer[29];
-    sprintf(buffer,"VICTIM Detected: %c, Side: %c", victim, ((side == ErrorCodes::left) ? 'L' : 'R'));
+    sprintf(buffer,"VICTIM: %c, Side: %c", victim, ((side == ErrorCodes::left) ? 'L' : 'R'));
     _ui->ShowPopup(buffer, ErrorCodes::info, 5);
 
     _ui->LED_BUZZER_Signal(500, 500 ,1);
