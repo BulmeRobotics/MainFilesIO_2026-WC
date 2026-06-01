@@ -61,7 +61,7 @@ TofSensors tof;
 Mapping mapper;
 Drivetrain drivetrain;
 Driving robot;
-Vcameras cam;
+Vcameras cam(&Serial);
 BLE_UART ble(false);
 
 
