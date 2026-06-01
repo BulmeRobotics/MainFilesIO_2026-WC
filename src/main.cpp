@@ -457,7 +457,8 @@ while (true) {
 
     uint32_t bleStart = millis();
     ble.print("BLE CONNECTED\nTime: ");
-    ble.println(millis()-bleStart);
+    uint32_t bleTime = millis() - bleStart;
+    ble.println(bleTime);
   }
 
 }

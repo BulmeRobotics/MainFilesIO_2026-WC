@@ -183,7 +183,7 @@ size_t BLE_UART::write(const uint8_t *buffer, size_t size) {
     size_t sent = 0;
     while(size > 0){
         size_t chunk = (size > 20) ? 20 : size;
-        if(txCharacteristic.writeValue(buffer + sent, chunk)) {
+        if(txCharacteristic.writeValue(buffer + sent, chunk, false)) {
             sent += chunk;
             size -= chunk;
         } else {
