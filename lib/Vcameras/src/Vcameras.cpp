@@ -78,9 +78,10 @@ bool Vcameras::TryReceivePacketNonBlocking(){
 ErrorCodes Vcameras::EnableNonBlockingStep(){
     if (!_pending) return ErrorCodes::OK;
 
-    String packet;
     if (TryReceivePacketNonBlocking()) {
+        String packet = _rxAsync;
         _pending = false;
+        _rxAsync = "";
         if (packet.indexOf("OK") != -1) {
             _enabled = _enTarget;
             if(_enabled == false) { _LeftEnabled = false; _RightEnabled = false; }
@@ -106,6 +107,11 @@ ErrorCodes Vcameras::EnableNonBlockingStep(){
 ErrorCodes Vcameras::Enable(bool en, bool blocking){
     if(!_connected) return ErrorCodes::no_connection;   //Check for connection first
     if(en && _victimFound) return ErrorCodes::OK;
+
+    if(_debug_ifc != nullptr){
+        _debug_ifc->print(en ? "En" : "Dis");
+        _debug_ifc->println(" Cams");
+    }
 
     if (_pending) {
         if (_enTarget != en) {
@@ -161,13 +167,13 @@ ErrorCodes Vcameras::HandleReset(){
 //---------------------------------------------------------------------------------------------------------
 
 ErrorCodes Vcameras::Update(bool onRed){
-    if(!_connected) return ErrorCodes::no_connection;
+    if(!_connected) {if(_debug_ifc!=nullptr) _debug_ifc->println("Cams no connection");return ErrorCodes::no_connection;}
 
     // Progress pending async enable commands for both cameras each cycle.
     EnableNonBlockingStep();
     EnableNonBlockingStep();
 
-    if(HandleReset() == ErrorCodes::disabled) return ErrorCodes::disabled;
+    if(HandleReset() == ErrorCodes::disabled) {if(_debug_ifc!=nullptr) _debug_ifc->println("Cams Disabled");return ErrorCodes::disabled;}
 
     if(_oldRed && !onRed) {
         Enable(true, false);
@@ -177,7 +183,7 @@ ErrorCodes Vcameras::Update(bool onRed){
     _oldRed = onRed;
     if(onRed) return ErrorCodes::OK;
 
-    if(!_enabled) return ErrorCodes::disabled;
+    if(!_enabled) { if(_debug_ifc!=nullptr) _debug_ifc->println("Cams Disabled"); return ErrorCodes::disabled;}
 
     //check if cameras are enabled
     _LeftEnabled = digitalRead(CAMERAL_PIN_EN);
@@ -241,7 +247,7 @@ ErrorCodes Vcameras::Update(bool onRed){
     }
 
     //Signal Victim
-    char buffer[20];
+    char buffer[29];
     sprintf(buffer,"VICTIM Detected: %c, Side: %c", victim, ((side == ErrorCodes::left) ? 'L' : 'R'));
     _ui->ShowPopup(buffer, ErrorCodes::info, 5);
 

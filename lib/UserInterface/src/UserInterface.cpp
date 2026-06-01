@@ -182,6 +182,9 @@ void UserInterface::ConstructRunMenu() {
     display.print("CAMERAS");
     display.drawLine(MAP_AREA_WIDTH + 15, 45, 780, 45, TEXT_COLOR);
 
+        //Camera alert
+    display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0x8410);
+    
         //Rescue Packs background
     display.fillRoundRect(MAP_AREA_WIDTH + 20, 160, 160, 40, 10, 0x8410);
     display.fillRect(MAP_AREA_WIDTH + 95,160,10,40,0x5aab);
@@ -205,7 +208,7 @@ void UserInterface::UpdateRunMenu() {
         if(camIsAlert) //Is ALERT
          display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0xFB0C); //Green //Dark Green 0x0320
         else     //No ALERT
-         display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0x8410); //Green //Dark Green 0x0320
+         display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0x8410); //Grey
 
         display.setTextColor(0x3186);// Dark Grey  //Grey 0x8410
         display.setCursor(MAP_AREA_WIDTH + 25 + 30, 68);
