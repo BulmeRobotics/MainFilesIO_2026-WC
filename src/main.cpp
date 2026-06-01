@@ -53,6 +53,7 @@
 
 //----Objects----
 UserInterface UI(100); // Update Interval: 50ms
+BLE_UART ble;
 EEPROM eeprom;
 ColorSensing cs/*(&Serial)*/;
 GyroBNO055 gyro;
@@ -61,8 +62,8 @@ TofSensors tof;
 Mapping mapper;
 Drivetrain drivetrain;
 Driving robot;
-Vcameras cam(&Serial);
-BLE_UART ble(false);
+Vcameras cam/*(&ble)*/;
+
 
 
 #ifdef _MSC_VER

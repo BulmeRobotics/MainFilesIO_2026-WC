@@ -738,6 +738,7 @@ void UserInterface::Initialize(){
             BuzzerSignal(200,200,1);
         }
     } else AddInfoMsg("Battery", "OK", true);
+    
     SetIllumination(0, 0, 0, 255); // Turn on Illumination at Startup
     driveMode = ErrorCodes::straight;
 }

@@ -68,7 +68,7 @@ class Button{
 
 class UserInterface {
 private:
-    static constexpr char UI_VERSION[4] = "2.1";
+    static constexpr char UI_VERSION[4] = "2.3";
 
     #define TEXT_SIZE 4
     #define TEXT_COLOR 0xce4a
