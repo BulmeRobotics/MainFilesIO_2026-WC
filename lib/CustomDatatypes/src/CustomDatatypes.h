@@ -73,6 +73,7 @@ struct PID_Coefficients {
 	float P;
 	float I;
 	float D;
+	float dt_nominal; // nominal loop dt in seconds; clamp threshold = 2×dt_nominal
 };
 #ifdef _MSC_VER
 #pragma region Gyro

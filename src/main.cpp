@@ -18,6 +18,7 @@
 #define LOWER_LEVEL_HEIGHT -100
 
 // #define PID_TUNE_MODE        // Uncomment to enable drive-forever PID tuning harness
+// #define TURN_TUNE_MODE       // Uncomment to enable alternating-90° turn PID tuning harness
 // #define DEBUG_LOOP_TIMING    // Uncomment to print per-subsystem timing in cyclicMainTask/cyclicRunTask
 
 #ifdef _MSC_VER
@@ -187,6 +188,25 @@ int main(void) {
     cyclicMainTask();
     cyclicRunTask();
     robot.ControlDrive(UI.GetDriveSpeed(), gyro.GetAngleFromOrientation(robot.GetRobotTargetAngle()));
+  }
+#endif
+
+#ifdef TURN_TUNE_MODE
+  while (currentMenuState != RobotState::RUN) {
+    cyclicMainTask();
+  }
+  gyro.ResetAllAngles();
+  bool _tuneRight = true;
+  robot.StartTurn(90.0f);
+  while (true) {
+    serialLoop();
+    cyclicMainTask();
+    cyclicRunTask();
+    if (robot.ControlTurn(_tuneRight ? 90.0f : 0.0f) == ErrorCodes::TURNED) {
+      delay(300);
+      _tuneRight = !_tuneRight;
+      robot.StartTurn(_tuneRight ? 90.0f : 0.0f);
+    }
   }
 #endif
 
@@ -411,8 +431,9 @@ while (true) {
       robot.EndDrive();
       robot.DisableBumpers();
       cam.Enable(false);
-      UI.LED_BUZZER_Signal(1000,1000,5);
       currentMenuState = RobotState::ABOUT;
+      UI.Update();
+      UI.LED_BUZZER_Signal(1000,1000,5);
     }
   } 
   
