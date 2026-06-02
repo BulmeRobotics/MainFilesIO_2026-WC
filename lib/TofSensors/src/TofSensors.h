@@ -293,6 +293,9 @@ class TofSensors {
         static constexpr uint8_t I2C_ADDRESS_MB   = 0x78;
         static constexpr uint8_t I2C_ADDRESS_MFW  = 0x7C;
         static constexpr uint8_t I2C_ADDRESS_MBW  = 0x80;
+
+        static constexpr uint16_t RAMP_MAX_DETECTION_DISTANCE = 450;
+        static constexpr int16_t  RAMP_DIFF_THRESHOLD         = 25;
         // static constexpr uint8_t I2C_ADDRESS_Fx64 = 0x46;
         // static constexpr uint8_t I2C_ADDRESS_Bx64 = 0x47;
 
@@ -402,10 +405,17 @@ class TofSensors {
         uint8_t GetWalls(bool rampInfront, bool rampBehind);
 
         /**
-        * @brief  Method to check if a ramp is in front of or behind the robot.
+        * @brief  Checks whether a ramp is present in front of or behind the robot.
+        *         Front: compares upper sensor (front) vs lower sensor (frontWall), 23 mm vertical
+        *         separation, both horizontal — ramp surface hits the lower sensor closer, upper
+        *         farther → positive difference indicates a ramp.
+        *         Back: compares horizontal sensor (back) vs downward-tilted sensor (backWall, −5°),
+        *         same mounting height — ramp surface hits the tilted sensor closer → same sign.
+        *         Both sensors must read within RAMP_MAX_DETECTION_DISTANCE (450 mm) and the
+        *         difference must reach RAMP_DIFF_THRESHOLD (25 mm) for a positive result.
         * @param  side  false = front; true = back.
         * @return true if a ramp is detected.
-        *         false if no ramp is detected.
+        *         false if no ramp is detected or either sensor is out of range.
         */
         bool IsRampThere(bool side);
 };
