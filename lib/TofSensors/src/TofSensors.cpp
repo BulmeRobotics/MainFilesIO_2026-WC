@@ -585,11 +585,9 @@ uint8_t TofSensors::GetWalls(bool rampInfront, bool rampBehind) {
 }
 
 bool TofSensors::IsRampThere(bool side) {
-	// if (!side)
-	// 	return front_x64.IsRamp();
-	// else
-	// 	return back_x64.IsRamp();
-
+	// Pending hardware change: front lower sensor to 3°, back lower sensor to 12° downward tilt.
+	// Re-enable once sensors are remounted and RAMP_DIFF_THRESHOLD is retuned (~60 mm).
+	(void)side;
 	return false;
 }
 

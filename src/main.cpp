@@ -20,6 +20,7 @@
 // #define PID_TUNE_MODE        // Uncomment to enable drive-forever PID tuning harness
 // #define TURN_TUNE_MODE       // Uncomment to enable alternating-90° turn PID tuning harness
 // #define DEBUG_LOOP_TIMING    // Uncomment to print per-subsystem timing in cyclicMainTask/cyclicRunTask
+// #define RAMP_TEST_MODE       // Uncomment to test front ramp detection (prints upper/lower/diff/result in a loop)
 
 #ifdef _MSC_VER
   #pragma endregion Defines
@@ -208,6 +209,21 @@ int main(void) {
       _tuneRight = !_tuneRight;
       robot.StartTurn(_tuneRight ? 90.0f : 0.0f);
     }
+  }
+#endif
+
+#ifdef RAMP_TEST_MODE
+  while (true) {
+    tof.Update();
+    uint16_t upper = tof.GetRange(TofType::FRONT);
+    uint16_t lower = tof.GetRange(TofType::FRONT_WALL);
+    int16_t  diff  = static_cast<int16_t>(upper) - static_cast<int16_t>(lower);
+    bool     ramp  = tof.IsRampThere(false);
+    Serial.print("upper="); Serial.print(upper);
+    Serial.print("  lower="); Serial.print(lower);
+    Serial.print("  diff="); Serial.print(diff);
+    Serial.print("  ramp="); Serial.println(ramp ? "YES" : "no");
+    delay(200);
   }
 #endif
 

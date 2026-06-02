@@ -142,7 +142,6 @@ ErrorCodes Driving::Turn180Degree(void) {
 	return ErrorCodes::OK;
 }
 
-
 int8_t Driving::SelectAlignSide(void){
 	// Picks the closer side wall, sets distanceFront/distanceBack and coeffSide as side effects.
 	// Returns 1 for left, -1 for right, 0 if no usable wall found on either side.
@@ -161,7 +160,6 @@ int8_t Driving::SelectAlignSide(void){
 	}
 	return 0;
 }
-
 
 ErrorCodes Driving::StartAlign(void) {
 	p_tof->Update();
@@ -387,7 +385,7 @@ ErrorCodes Driving::StartAdjustment(void) {
 ErrorCodes Driving::ReverseBlackTile(void) {
 	p_drivetrain->EnableEncoder();
 	p_drivetrain->ResetEncoder();
-	while (p_drivetrain->GetEncoderDistance() < 150) {	// Drive back ~15 cm
+	while (p_drivetrain->GetEncoderDistance() < 170) {	// Drive back ~17 cm
 		p_drivetrain->SetSpeed(-30);
 	}
 	p_drivetrain->Stop();
