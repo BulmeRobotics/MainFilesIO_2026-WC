@@ -270,6 +270,9 @@ ErrorCodes Mapping::Move(bool direction) {
 
 ErrorCodes Mapping::Ramp(ErrorCodes direction, uint8_t length) {
     if(_layerSetting == ErrorCodes::single) direction = ErrorCodes::same;
+    if(_rampSetting == ErrorCodes::single) length = 1;
+
+    if(length <= 0) return ErrorCodes::invalid;
     
     //Use existing ramps:
     if(tiles[currentPosition]. down != -1){

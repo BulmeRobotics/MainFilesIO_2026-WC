@@ -421,35 +421,42 @@ void UserInterface::ConstructSettingsMenu() {
     display.fillScreen(BG_COLOR); // Komplettes Display löschen
     DrawMainMenuStatic();         // Linke Navigation malen
 
-    // Label-Boxen (Statischer Text)
-    display.fillRoundRect(140, 10, 362, 44, 10, HL_COLOR);
-
-    //Color Sensors
-    display.fillRoundRect(140, 158, 640, 152, 10, HL_COLOR);
-    
     display.setTextSize(3);
     display.setTextColor(TEXT_COLOR, HL_COLOR);
+
+    // -- drive Mode --
+    display.fillRoundRect(140, 10, 362, 44, 10, HL_COLOR);
     display.setCursor(150, 20);
     display.print("driveMode:");
+
+    // -- Color Sensors --
+    display.fillRoundRect(140, 158, 640, 152, 10, HL_COLOR);
     display.setCursor(150, 168);
     display.print("ColorSensor Calibration");
-
-    //Background for speed
-    display.fillRect(160,64,190,84, BTN_COLOR);
-
-    // Draw Buttons
-    btnSpeedMinus.Draw(display, "-");
-    btnSpeedPlus.Draw(display, "+");
-    display.fillRoundRect(280,91,60,30,10,BTN_COLOR);
-
     btnCalibWhite.Draw(display, "WHI");
-    btnBleConnect.Draw(display, "BLE");
-    
     btnCalibBlack.Draw(display, "Bla");
     btnCalibBlue.Draw(display, "Blu");
     btnCalibDZone.Draw(display, "Red");
     btnCalibCheckP.Draw(display, "Sil");
-    btnLayerSetting.Draw(display,(p_mapping->GetLayerSetting() == ErrorCodes::single) ? "single" : "multi");
+
+    // -- SPEED --
+    display.fillRect(160,64,190,84, BTN_COLOR);
+        // Draw Buttons
+    btnSpeedMinus.Draw(display, "-");
+    btnSpeedPlus.Draw(display, "+");
+    display.fillRoundRect(280,91,60,30,10,BTN_COLOR);
+
+    // -- BLE --
+    btnBleConnect.Draw(display, "BLE");
+    
+    // -- Mapping Settings --
+    display.fillRoundRect(140, 320, 150, 370, 10, HL_COLOR);
+    display.setTextSize(3);
+    display.setTextColor(TEXT_COLOR, HL_COLOR);
+    display.setCursor(150,330);
+    display.print("Map: LAYER | RAMP");
+    btnLayerSetting.Draw(display,(p_mapping->GetSetting(ErrorCodes::layer)  == ErrorCodes::single) ? "single" : "multi");
+    btnRampSetting.Draw (display,(p_mapping->GetSetting(ErrorCodes::ramp)   == ErrorCodes::single) ? "short" : "dynamic");
 }
 
 #ifdef _MSC_VER
@@ -1006,9 +1013,17 @@ void UserInterface::Update(){
             if(btnLayerSetting.IsPressed(tx,ty)){
                 BuzzerSignal(5,0,1);
                 ErrorCodes newLayer = ErrorCodes::single;
-                if(p_mapping->GetLayerSetting() == ErrorCodes::single) newLayer = ErrorCodes::multi;
-                p_mapping->SetLayerSetting(newLayer);
-                btnLayerSetting.Draw(display,(p_mapping->GetLayerSetting() == ErrorCodes::single) ? "single" : "multi");
+                if(p_mapping->GetSetting(ErrorCodes::layer) == ErrorCodes::single) newLayer = ErrorCodes::multi;
+                p_mapping->SetSettings(newLayer, p_mapping->GetSetting(ErrorCodes::ramp));
+                btnLayerSetting.Draw(display,(p_mapping->GetSetting(ErrorCodes::layer) == ErrorCodes::single) ? "single" : "multi");
+            }
+
+            if(btnRampSetting.IsPressed(tx,ty)){
+                BuzzerSignal(5,0,1);
+                ErrorCodes newRamp = ErrorCodes::single;
+                if(p_mapping->GetSetting(ErrorCodes::ramp) == ErrorCodes::single) newRamp = ErrorCodes::multi;
+                p_mapping->SetSettings(p_mapping->GetSetting(ErrorCodes::layer), newRamp);
+                btnLayerSetting.Draw(display,(p_mapping->GetSetting(ErrorCodes::layer) == ErrorCodes::single) ? "short" : "dynamic");
             }
 
             //Speed

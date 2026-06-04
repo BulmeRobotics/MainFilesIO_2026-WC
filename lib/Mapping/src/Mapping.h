@@ -113,6 +113,7 @@ private:    // --- PRIVATE ---
     ErrorCodes pathPriority = ErrorCodes::straight;
     bool _RETURN_HOME = false;
     ErrorCodes _layerSetting = ErrorCodes::single;
+    ErrorCodes _rampSetting = ErrorCodes::multi;
 
     // -- BUMPER --
     bool _BumperTriggered = false;
@@ -156,17 +157,27 @@ public: // --- PUBLIC ---
      * @param set single / multi 
      * @return current setting
      */
-    ErrorCodes SetLayerSetting(ErrorCodes set){
-        if(set == ErrorCodes::single || set == ErrorCodes::multi)
-            _layerSetting = set;
-        return _layerSetting;
+    ErrorCodes SetSettings(ErrorCodes layer, ErrorCodes ramp){
+        if(layer == ErrorCodes::single || layer == ErrorCodes::multi)
+            _layerSetting = layer;
+        else return ErrorCodes::invalid;
+
+        if(ramp == ErrorCodes::single || ramp == ErrorCodes::multi)
+            _rampSetting = ramp;
+        else return ErrorCodes::invalid;
+
+        return ErrorCodes::OK;
     }
 
     /**
      * @brief gets current ramp handling
      * @return current layer setting -> single / multi
      */
-    ErrorCodes GetLayerSetting() { return _layerSetting; };
+    ErrorCodes GetSetting(ErrorCodes set) {
+        if(!(set == ErrorCodes::ramp || set == ErrorCodes::layer)) return ErrorCodes::invalid;
+        ErrorCodes _setting = (set == ErrorCodes::ramp) ? _rampSetting : _layerSetting;
+        return _setting; 
+    };
 
     // /**
     //  * @brief Druckt die intern gespeicherte Karte des Roboters in die Konsole

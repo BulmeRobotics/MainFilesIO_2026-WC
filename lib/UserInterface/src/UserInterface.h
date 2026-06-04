@@ -171,7 +171,8 @@ private:
     Button btnCalibDZone  = Button(532, 200, 104, 100, BTN_COLOR, 0xf800, 3, nullptr); // Rot
     Button btnCalibCheckP = Button(656, 200, 104, 100, BTN_COLOR, TEXT_COLOR, 3, nullptr); // Gelb/Text
 
-    Button btnLayerSetting = Button(500, 71, 145, 70, BTN_COLOR, TEXT_COLOR, 3, nullptr);
+    Button btnLayerSetting= Button(160, 362, 145, 70, BTN_COLOR, TEXT_COLOR, 3, nullptr);
+    Button btnRampSetting = Button(325, 362, 165, 70, BTN_COLOR, TEXT_COLOR, 3, nullptr);
 
 // --- Functions ---
     // -- Main Menu --
