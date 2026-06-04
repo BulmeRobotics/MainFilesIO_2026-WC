@@ -766,6 +766,7 @@ ErrorCodes Driving::BumperHandler(void){
 			registeredBumps += 1;
 
 			if (registeredBumps > BUMPER_TRYS) return HandleWallCollision();
+			else p_mapSys->Bumper(false);
 
 			float saveDistance = 0;
 			if (sensor.type == ReferenceObj::ENCODER) {
@@ -792,7 +793,7 @@ ErrorCodes Driving::BumperHandler(void){
 
 ErrorCodes Driving::HandleWallCollision(void){
 	// Registers a wall collision: updates the map, resets bump counter, backs away.
-	p_mapSys->Bumper();
+	p_mapSys->Bumper(true);	//reset
 	registeredBumps = 0;
 	ReverseBumper(40, -40, -40);
 	return ErrorCodes::BUMPER_WALL;
