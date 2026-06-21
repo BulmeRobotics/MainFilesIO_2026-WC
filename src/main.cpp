@@ -20,7 +20,7 @@
 // #define PID_TUNE_MODE        // Uncomment to enable drive-forever PID tuning harness
 // #define TURN_TUNE_MODE       // Uncomment to enable alternating-90° turn PID tuning harness
 // #define DEBUG_LOOP_TIMING    // Uncomment to print per-subsystem timing in cyclicMainTask/cyclicRunTask
-// #define RAMP_TEST_MODE       // Uncomment to test front ramp detection (prints upper/lower/diff/result in a loop)
+// #define RAMP_TEST_MODE       // Uncomment to test ramp detection (loops IsRampThere front+back; pair with DEBUG_RAMP)
 
 #ifdef _MSC_VER
   #pragma endregion Defines
@@ -80,8 +80,6 @@ uint32_t ts_lastCycle;
 
 //----Flags----
 bool _ROBOT_TURNING = false;
-bool _RAMP_INFRONT = false;
-bool _RAMP_BEHIND = false;
 ErrorCodes _CHECKPOINT = ErrorCodes::OK;
 
 #ifdef _MSC_VER
@@ -213,16 +211,14 @@ int main(void) {
 #endif
 
 #ifdef RAMP_TEST_MODE
+  // Drives IsRampThere() for both sides in a loop. The upper/lower/diff values are printed by
+  // the method's own DEBUG_RAMP trace — enable // #define DEBUG_RAMP in TofSensors.cpp to see them.
   while (true) {
     tof.Update();
-    uint16_t upper = tof.GetRange(TofType::FRONT);
-    uint16_t lower = tof.GetRange(TofType::FRONT_WALL);
-    int16_t  diff  = static_cast<int16_t>(upper) - static_cast<int16_t>(lower);
-    bool     ramp  = tof.IsRampThere(false);
-    Serial.print("upper="); Serial.print(upper);
-    Serial.print("  lower="); Serial.print(lower);
-    Serial.print("  diff="); Serial.print(diff);
-    Serial.print("  ramp="); Serial.println(ramp ? "YES" : "no");
+    bool rampFront = tof.IsRampThere(false);
+    bool rampBack  = tof.IsRampThere(true);
+    Serial.print("  -> front="); Serial.print(rampFront ? "RAMP" : "no");
+    Serial.print("   back=");    Serial.println(rampBack  ? "RAMP" : "no");
     delay(200);
   }
 #endif
@@ -252,7 +248,7 @@ while (true) {
 
     if (currentRunState == RunState::SETTILE) {
       UI.BuzzerSignal(5, 0, 1);
-			mapper.SetTile(tof.GetWalls(_RAMP_INFRONT, _RAMP_BEHIND), cs.GetFloor());
+			mapper.SetTile(tof.GetWalls(), cs.GetFloor());
 
       //Checkpoint handling
       if(cs.GetFloor() == TileType::checkpoint) UI.ShowPopup("CHECKPOINT",ErrorCodes::info, 4);
@@ -500,12 +496,12 @@ void cyclicMainTask() {
 void cyclicRunTask() {
   #ifdef DEBUG_LOOP_TIMING
   uint32_t _t = millis();
-  uint8_t buffer = tof.GetWalls(_RAMP_INFRONT, _RAMP_BEHIND);
+  uint8_t buffer = tof.GetWalls();
   Serial.print("GW:"); Serial.print(millis() - _t); _t = millis();
   cam.Update(cs.GetFloor() == TileType::dangerZone);
   Serial.print("\tCAM:"); Serial.println(millis() - _t);
   #else
-  //uint8_t buffer = tof.GetWalls(_RAMP_INFRONT, _RAMP_BEHIND);
+  //uint8_t buffer = tof.GetWalls();
   cam.Update(cs.GetFloor() == TileType::dangerZone);
   #endif
 

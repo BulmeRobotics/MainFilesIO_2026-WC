@@ -294,8 +294,10 @@ class TofSensors {
         static constexpr uint8_t I2C_ADDRESS_MFW  = 0x7C;
         static constexpr uint8_t I2C_ADDRESS_MBW  = 0x80;
 
-        static constexpr uint16_t RAMP_MAX_DETECTION_DISTANCE = 450;
-        static constexpr int16_t  RAMP_DIFF_THRESHOLD         = 25;
+        static constexpr uint16_t RAMP_MAX_DETECTION_DISTANCE_FRONT = 450;
+        static constexpr uint16_t RAMP_MAX_DETECTION_DISTANCE_BACK  = 300;
+        static constexpr int16_t  RAMP_DIFF_THRESHOLD_FRONT        = 40;
+        static constexpr int16_t  RAMP_DIFF_THRESHOLD_BACK         = 25;
         // static constexpr uint8_t I2C_ADDRESS_Fx64 = 0x46;
         // static constexpr uint8_t I2C_ADDRESS_Bx64 = 0x47;
 
@@ -397,22 +399,23 @@ class TofSensors {
         int8_t CalculateLeftRightError(float angleError, uint8_t sideWallThreshold, uint8_t gapRobotWall);
 
         /**
-        * @brief  Reads all side and front/back sensors and returns a wall bitmask.
-        * @param  rampInfront  true if a ramp is detected in front (suppresses front wall bit).
-        * @param  rampBehind   true if a ramp is detected behind (suppresses back wall bit).
+        * @brief  Reads all side and front/back sensors and returns a wall bitmask. Detects ramps
+        *         internally (IsRampThere) so a ramp ahead/behind is not recorded as a wall.
         * @return Wall bitmask: bit 0 = front, bit 1 = right, bit 2 = back, bit 3 = left.
         */
-        uint8_t GetWalls(bool rampInfront, bool rampBehind);
+        uint8_t GetWalls(void);
 
         /**
         * @brief  Checks whether a ramp is present in front of or behind the robot.
-        *         Front: compares upper sensor (front) vs lower sensor (frontWall), 23 mm vertical
-        *         separation, both horizontal — ramp surface hits the lower sensor closer, upper
+        *         Front: compares upper sensor (front) vs lower sensor (frontWall, −3° tilt),
+        *         23 mm vertical separation — ramp surface hits the lower sensor closer, upper
         *         farther → positive difference indicates a ramp.
-        *         Back: compares horizontal sensor (back) vs downward-tilted sensor (backWall, −5°),
+        *         Back: compares horizontal sensor (back) vs downward-tilted sensor (backWall, −12°),
         *         same mounting height — ramp surface hits the tilted sensor closer → same sign.
-        *         Both sensors must read within RAMP_MAX_DETECTION_DISTANCE (450 mm) and the
-        *         difference must reach RAMP_DIFF_THRESHOLD (25 mm) for a positive result.
+        *         Both sensors must read within the per-side cap (front 450 mm, back 300 mm — the
+        *         range over which the drive references absolutely; back also stays under the 12°
+        *         floor-intersection) and the difference must reach the per-side threshold
+        *         (front 40 mm, back 25 mm — the back's geometry yields a smaller ramp diff).
         * @param  side  false = front; true = back.
         * @return true if a ramp is detected.
         *         false if no ramp is detected or either sensor is out of range.

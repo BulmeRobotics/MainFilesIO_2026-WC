@@ -11,13 +11,14 @@
 #pragma region DEBUG
 #endif
 
-// #define DEBUG_RAMP
+//#define DEBUG_RAMP
 // #define DEBUG_RAMP_ARRAY
 // #define DEBUG_X64
-// #define DEBUG_DRIVING
+//#define DEBUG_DRIVING
 // #define DEBUG_TURN
 // #define DEBUG_PID
 // #define DEBUG_TURN_PID
+// #define DEBUG_ALIGN
 
 #ifdef _MSC_VER
 #pragma endregion DEBUG
@@ -128,7 +129,6 @@ ErrorCodes Driving::EndTurn(void){
 	p_mapSys->Turn(p_gyro->GetOrientationFromAngle());
 	_TURNING = false;
 	p_colorSensing->Freeze(false);
-	UpdateRampProximityFlags();
 	return ErrorCodes::OK;
 }
 
@@ -166,7 +166,7 @@ ErrorCodes Driving::StartAlign(void) {
 	_TURNING = true;
 	uint32_t startTime = millis();
 
-	#ifdef DEBUG_DRIVING
+	#ifdef DEBUG_ALIGN
 		Serial.print("LB: "); Serial.print(p_tof->GetRange(TofType::LEFT_BACK));
 		Serial.print("\tLF: "); Serial.print(p_tof->GetRange(TofType::LEFT_FRONT));
 		Serial.print("\tRF: "); Serial.print(p_tof->GetRange(TofType::RIGHT_FRONT));
@@ -179,7 +179,7 @@ ErrorCodes Driving::StartAlign(void) {
 		return ErrorCodes::NOT_ALIGNING;
 	}
 
-	#ifdef DEBUG_DRIVING
+	#ifdef DEBUG_ALIGN
 		Serial.print("\tSide: "); Serial.println(coeffSide == 1 ? "LEFT" : "RIGHT");
 	#endif
 
@@ -208,7 +208,7 @@ ErrorCodes Driving::StartAlign(void) {
 		else if (distanceError < 0) turnSpeedAlign = 40.0f * (1 - pow(EULER, (float)abs(distanceError) / -20.0f)) + 20.0f;
 		else                        turnSpeedAlign = 0;
 
-		#ifdef DEBUG_DRIVING
+		#ifdef DEBUG_ALIGN
 			Serial.print("Error: "); Serial.print(distanceError);
 			Serial.print("\tSpeed: "); Serial.println(turnSpeedAlign);
 		#endif
@@ -331,6 +331,10 @@ ErrorCodes Driving::ControlDrive(int8_t driveSpeed, float angle) {
 }
 
 ErrorCodes Driving::CheckDrive(void) {
+	// While climbing, the distance target is meaningless — RampHandler ends the drive on incline-flat.
+	// Without this, an ENCODER-referenced ramp approach hits its target mid-climb and cuts it short.
+	if (_ON_RAMP) return ErrorCodes::CHECK_RAMP;
+
 	if (sensor.type == ReferenceObj::ENCODER)
 		newValue = p_drivetrain->GetEncoderDistance();
 	else
@@ -406,6 +410,10 @@ TOF_Optimal_Value Driving::GetOptimalSensor(bool rampDown){
 		result.type = ReferenceObj::ENCODER;
 		return result;
 	}
+
+	// Re-detect ramps every drive segment so straight tile-to-tile runs (not just turn/ramp ends)
+	// keep the reference selection from picking a ramp surface. Consumed below by ApplyRampFlagOverrides.
+	UpdateRampProximityFlags();
 
 	#ifdef DEBUG_X64
 	Serial.print("RAMP_BEHIND: ");
@@ -514,7 +522,7 @@ bool Driving::CheckStairRamp(void) {
 }
 
 void Driving::UpdateRampProximityFlags(void) {
-	// Sets _RAMP_INFRONT/_RAMP_BEHIND based on the 8×8 ToF ramp detection.
+	// Sets _RAMP_INFRONT/_RAMP_BEHIND from the upper/lower VL53L4CD pair ramp detection.
 	if (p_tof->IsRampThere(false)) {
 		_RAMP_INFRONT = true;
 		_RAMP_BEHIND  = false;
@@ -530,7 +538,7 @@ void Driving::UpdateRampProximityFlags(void) {
 }
 
 ErrorCodes Driving::FinishRamp(uint8_t distance){
-	// Drives forward a fixed distance to clear the ramp end, then aligns, re-enables bumpers, and reads ramp flags.
+	// Drives forward a fixed distance to clear the ramp end, then aligns and re-enables bumpers.
 	p_drivetrain->ResetEncoder(0);	// Reset encoder
 	p_drivetrain->EnableEncoder();	// Enable encoder interrupts
 	ts_encoderStartTime = millis();	// Record start time
@@ -543,7 +551,6 @@ ErrorCodes Driving::FinishRamp(uint8_t distance){
 
 	StartAlign();		// Align robot
 	EnableBumpers();	// Re-enable bumpers after ramp traversal
-	UpdateRampProximityFlags();
 	return ErrorCodes::OK;
 }
 
@@ -656,7 +663,7 @@ void Driving::ClassifyAndFinishRamp(void){
 		FinishRamp(75);
 		_STAIR = true;
 	}
-	else FinishRamp(60);
+	else FinishRamp(80);
 
 	for (uint16_t i = 0; i < INCLINE_ARRAY_SIZE; i++) arrIncline[i] = 0.0;
 

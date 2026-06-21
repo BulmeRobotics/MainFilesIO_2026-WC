@@ -8,6 +8,8 @@
 //----Libraries----
 #include "TofSensors.h"
 
+//#define DEBUG_RAMP    // Uncomment to print IsRampThere() upper/lower/diff (used by RAMP_TEST_MODE)
+
 #ifdef _MSC_VER
     #pragma region Parent Class //-----------------------------------------------------------------------------------------------
 #endif
@@ -554,8 +556,12 @@ int8_t TofSensors::CalculateLeftRightError(float angleError, uint8_t sideWallThr
 	else return 0;
 }
 
-uint8_t TofSensors::GetWalls(bool rampInfront, bool rampBehind) {
+uint8_t TofSensors::GetWalls(void) {
 	uint8_t wallInfo = 0;
+
+	// Detect ramps directly so a ramp ahead/behind is not recorded as a wall.
+	bool rampInfront = IsRampThere(false);
+	bool rampBehind  = IsRampThere(true);
 
 	if (leftBack.GetRange() < 150
 		&& leftFront.GetRange() < 150) wallInfo |= (1 << 3);	// Left
@@ -585,10 +591,26 @@ uint8_t TofSensors::GetWalls(bool rampInfront, bool rampBehind) {
 }
 
 bool TofSensors::IsRampThere(bool side) {
-	// Pending hardware change: front lower sensor to 3°, back lower sensor to 12° downward tilt.
-	// Re-enable once sensors are remounted and RAMP_DIFF_THRESHOLD is retuned (~60 mm).
-	(void)side;
-	return false;
+	uint16_t upper = side ? back.GetRange()     : front.GetRange();
+	uint16_t lower = side ? backWall.GetRange() : frontWall.GetRange();
+	// Per-side cap: only ranges where the drive would reference absolutely (front <=410, back <=250)
+	// can be corrupted by a ramp; the back cap also stays under the 12 deg floor-intersection (~494 mm).
+	uint16_t maxDist = side ? RAMP_MAX_DETECTION_DISTANCE_BACK : RAMP_MAX_DETECTION_DISTANCE_FRONT;
+	// Both sensors must see a near surface; otherwise there is no wall/ramp to compare against.
+	if(upper > maxDist || lower > maxDist)
+		return false;
+	// Cast to signed before subtracting to avoid uint16_t underflow when lower > upper.
+	int16_t diff = static_cast<int16_t>(upper) - static_cast<int16_t>(lower);
+	// Back needs a lower threshold: the 12 deg/height geometry yields a smaller ramp diff (~36)
+	// than the front (~60), while flat walls stay negative on both sides.
+	int16_t threshold = side ? RAMP_DIFF_THRESHOLD_BACK : RAMP_DIFF_THRESHOLD_FRONT;
+	#ifdef DEBUG_RAMP
+		Serial.print(side ? "BACK" : "FRONT");
+		Serial.print(" ramp  upper="); Serial.print(upper);
+		Serial.print("  lower="); Serial.print(lower);
+		Serial.print("  diff="); Serial.println(diff);
+	#endif
+	return diff >= threshold;
 }
 
 #ifdef _MSC_VER
