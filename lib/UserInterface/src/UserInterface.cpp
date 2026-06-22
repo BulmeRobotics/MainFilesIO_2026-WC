@@ -446,7 +446,7 @@ void UserInterface::ConstructSettingsMenu() {
     btnBleConnect.Draw(display, "BLE");
     
     // -- Mapping Settings --
-    display.fillRoundRect(140, 320, 150, 370, 10, HL_COLOR);
+    display.fillRoundRect(140, 320, 370, 150, 10, HL_COLOR);
     display.setTextSize(3);
     display.setTextColor(TEXT_COLOR, HL_COLOR);
     display.setCursor(150,330);
@@ -1019,7 +1019,7 @@ void UserInterface::Update(){
                 ErrorCodes newRamp = ErrorCodes::single;
                 if(p_mapping->GetSetting(ErrorCodes::ramp) == ErrorCodes::single) newRamp = ErrorCodes::multi;
                 p_mapping->SetSettings(p_mapping->GetSetting(ErrorCodes::layer), newRamp);
-                btnLayerSetting.Draw(display,(p_mapping->GetSetting(ErrorCodes::layer) == ErrorCodes::single) ? "short" : "dynamic");
+                btnRampSetting.Draw(display,(p_mapping->GetSetting(ErrorCodes::layer) == ErrorCodes::single) ? "short" : "dynamic");
             }
 
             //Speed
