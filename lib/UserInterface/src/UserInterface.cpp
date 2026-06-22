@@ -213,15 +213,12 @@ void UserInterface::UpdateRunMenu() {
         display.setTextColor(0x3186);// Dark Grey  //Grey 0x8410
         display.setCursor(MAP_AREA_WIDTH + 25 + 30, 68);
         display.print("ALERT");
-        
     }
     _lastCamAlert = camIsAlert;
     
     //Cam left Enabled?
     bool camEnBuff = p_camera->IsEnabled(ErrorCodes::left);
     if(camEnBuff != _lastCamLeftEn){
-        
-
         int16_t buffTxtColor =  _lastCamLeftEn ? TEXT_COLOR : 0x3186;
         int16_t buffColor =     _lastCamLeftEn ? 0x0320 : 0x8410;
         uint8_t buffOffset =    _lastCamLeftEn ? 18 : 8;
