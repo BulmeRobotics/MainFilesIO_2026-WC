@@ -230,7 +230,6 @@ ErrorCodes Vcameras::Update(bool onRed){
     _victimFound = true;
     _timeFound = millis();
     Enable(false, false);
-    Enable(false, false);
 
     //Get Amount of dropped Rescue Packs
     uint8_t amount;
