@@ -204,7 +204,7 @@ void UserInterface::UpdateRunMenu() {
 
     bool camIsAlert = p_camera->IsAlert();
     //Kamera Alert
-    if(camIsAlert != _lastCamAlert){
+    if(true || camIsAlert != _lastCamAlert){
         if(camIsAlert) //Is ALERT
          display.fillRoundRect(MAP_AREA_WIDTH + 20, 60, 160, 40, 10,0xFB0C); //Green //Dark Green 0x0320
         else     //No ALERT
@@ -218,7 +218,7 @@ void UserInterface::UpdateRunMenu() {
     
     //Cam left Enabled?
     bool camEnBuff = p_camera->IsEnabled(ErrorCodes::left);
-    if(camEnBuff != _lastCamLeftEn){
+    if(true || camEnBuff != _lastCamLeftEn){
         int16_t buffTxtColor =  _lastCamLeftEn ? TEXT_COLOR : 0x3186;
         int16_t buffColor =     _lastCamLeftEn ? 0x0320 : 0x8410;
         uint8_t buffOffset =    _lastCamLeftEn ? 18 : 8;
@@ -233,7 +233,7 @@ void UserInterface::UpdateRunMenu() {
 
     //Cam Right Enabled?
     camEnBuff = p_camera->IsEnabled(ErrorCodes::right);
-    if(camEnBuff != _lastCamRightEn){
+    if(true || camEnBuff != _lastCamRightEn){
         
 
         int16_t buffTxtColor =  _lastCamRightEn ? TEXT_COLOR : 0x3186;
