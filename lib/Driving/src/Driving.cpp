@@ -63,7 +63,7 @@ ErrorCodes Driving::ControlTurn(float angle) {
 	if (((millis() - ts_startTime) >= maxTurnTime))	turnTimeout = true;
 	else turnTimeout = false;
 
-	if ((p_gyro->data.angle_abs >= (angle + 1.0) || (p_gyro->data.angle_abs <= (angle - 1.0))) && !turnTimeout) {
+	if ((p_gyro->data.angle_abs >= (angle + 1.5) || (p_gyro->data.angle_abs <= (angle - 1.5))) && !turnTimeout) {
 		p_gyro->GetAngleAdvanced(angle, GyroAxles::Axis_X);
 
 		// dt measurement
