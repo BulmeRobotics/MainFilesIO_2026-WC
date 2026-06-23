@@ -113,7 +113,7 @@ public:
      * @param rampDetecting is a ramp currently being detected? (suppresses victim acting without disabling cams)
      * @return ErrorCodes for debugging
      */
-    ErrorCodes Update(bool onRed, bool onRamp = false, bool rampDetecting = false);
+    ErrorCodes Update(bool onRed, bool onRamp = false);
 
     /**
      * @brief Getter if Cam is enabled

@@ -179,13 +179,9 @@ ErrorCodes Vcameras::HandleReset(){
 // Update
 //---------------------------------------------------------------------------------------------------------
 
-ErrorCodes Vcameras::Update(bool onRed, bool onRamp, bool rampDetecting){
+ErrorCodes Vcameras::Update(bool onRed, bool onRamp){
     if(!_connected) {if(_debug_ifc!=nullptr) _debug_ifc->println("Cams no connection");return ErrorCodes::no_connection;}
 
-    // Gate IsAlert() and victim acting whenever a ramp is confirmed or merely being detected.
-    _rampSuppressed = onRamp || rampDetecting;
-
-    // Confirmed-ramp edge: physically disable the cams once on entry and notify on exit.
     if(onRamp != _oldOnRamp){
         if(onRamp && !_oldOnRamp) {
             ResetCam();
@@ -195,9 +191,7 @@ ErrorCodes Vcameras::Update(bool onRed, bool onRamp, bool rampDetecting){
         _oldOnRamp = onRamp;
     }
 
-    // Never act on a cam alert while on or detecting a ramp. During mere detection the cams stay
-    // physically enabled (no ResetCam), so a false positive resumes normal operation immediately.
-    if(_rampSuppressed) return ErrorCodes::ramp;
+    if(onRamp) return ErrorCodes::ramp;
 
     // Progress pending async enable commands for both cameras each cycle.
     EnableNonBlockingStep();
