@@ -160,10 +160,6 @@ int main(void) {
     break;
   } 
 
-  //----Camera----
-  if(cam.Init(&ejector, &mapper, &robot, &UI, &drivetrain) != ErrorCodes::OK) UI.AddInfoMsg("Cameras", "CONN ERROR", false);
-  else {UI.AddInfoMsg("Cameras", "OK", true);}
-
   //----Robot----
   robot.Init(&cs, &tof, &gyro, &mapper, &cam ,&drivetrain);
   UI.AddInfoMsg("Driving", "OK", true);
@@ -172,6 +168,10 @@ int main(void) {
   //----Ejector----
   ejector.Init(&robot);
   UI.AddInfoMsg("Ejectors", "OK", true);
+
+  //----Camera----
+  if(cam.Init(&ejector, &mapper, &robot, &UI, &drivetrain) != ErrorCodes::OK) UI.AddInfoMsg("Cameras", "CONN ERROR", false);
+  else {UI.AddInfoMsg("Cameras", "OK", true);}
 
   UI.AddInfoMsg("Finished STARTUP", "ACK", false);
 
