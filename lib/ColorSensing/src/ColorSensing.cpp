@@ -179,16 +179,6 @@ ErrorCodes ColorSensing::Update(){
             if(!_FREEZE_SENSOR) colorMiddle = checkMiddle();
             if(!middle.startReading()) return ErrorCodes::ERROR;
         }
-        // -- REFLECTIVE --
-        reflHistory[refl_index] = analogRead(REFL_READ);
-        if(_debugPort != nullptr) {
-            char buff[20];
-            snprintf(buff,sizeof(buff),"R: %4d", reflHistory[refl_index]);
-            _debugPort->println(buff);
-        }
-        refl_index++;
-        if(refl_index >= WINDOW_SIZE - 1) refl_index = 0;
-        digitalWrite(REFL_CTRL, LOW);
         return ErrorCodes::OK;
     }
     return ErrorCodes::disabled;
