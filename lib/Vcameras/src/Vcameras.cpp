@@ -27,7 +27,7 @@ ErrorCodes Vcameras::Init(Ejector* ejector, Mapping* mapper, Driving* robot, Use
     String str;
 
     _cam->print("<I>");
-    str = Recieve(CAM_TIMEOUT);
+    str = Recieve(CAM_TIMEOUT_INIT);
     _connected = (str.indexOf("OK") != -1) ? true : false;
 
     if(!_connected) return ErrorCodes::no_connection;
@@ -174,8 +174,12 @@ ErrorCodes Vcameras::HandleReset(){
 // Update
 //---------------------------------------------------------------------------------------------------------
 
-ErrorCodes Vcameras::Update(bool onRed){
+ErrorCodes Vcameras::Update(bool onRed, bool onRamp){
     if(!_connected) {if(_debug_ifc!=nullptr) _debug_ifc->println("Cams no connection");return ErrorCodes::no_connection;}
+
+    if(onRamp){
+        _oldOnRamp = onRamp;
+    }
 
     // Progress pending async enable commands for both cameras each cycle.
     EnableNonBlockingStep();

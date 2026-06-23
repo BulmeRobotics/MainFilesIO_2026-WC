@@ -29,6 +29,7 @@ private:
     static constexpr uint8_t CAMERAR_PIN_EN = 28;   //GPIO3 CM5 -> RASPI GPIO22
 
     static constexpr uint32_t CAM_TIMEOUT = 300;
+    static constexpr uint32_t CAM_TIMEOUT_INIT = 60000;
 
     //Serial
     static constexpr UART* _cam = &Serial2;
@@ -56,6 +57,7 @@ private:
     bool _LeftEnabled = false, _RightEnabled = false;
     bool _Alert = false;
     bool _oldRed = false;
+    bool _oldOnRamp = false;
 
     // Enable command state per camera (allows concurrent non-blocking left/right updates)
     bool _pending = false;
@@ -110,7 +112,7 @@ public:
      * @param wallR is a wall Right?
      * @return ErrorCodes for debugging
      */
-    ErrorCodes Update(bool onRed);
+    ErrorCodes Update(bool onRed, bool onRamp = false);
 
     /**
      * @brief Getter if Cam is enabled
