@@ -90,6 +90,7 @@ ErrorCodes _CHECKPOINT = ErrorCodes::OK;
 //----Functions----
 void cyclicMainTask();
 void cyclicRunTask();
+void ExecTileBehavior(TileAction action);
 
 void ISR_BTN_BLACK();
 void ISR_BTN_GRAY();
@@ -558,7 +559,7 @@ void ExecTileBehavior(TileAction action){
       currentRunState = RunState::SETTILE;	//SetTile again
     break;
 
-    case TileAction::STOP_AND_WAIT_5S:
+    case TileAction::STOP_AND_WAIT_5S: {
       //Stoppen
       robot.EndDrive();
       UI.ShowPopup("BLUE TILE", ErrorCodes::info);
@@ -567,6 +568,7 @@ void ExecTileBehavior(TileAction action){
         UI.Update();
         delay(480);
       }
+    }
     break;
 
     case TileAction::IGNORE:
