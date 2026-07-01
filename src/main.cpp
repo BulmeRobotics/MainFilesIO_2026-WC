@@ -57,7 +57,7 @@
 UserInterface UI(100); // Update Interval: 50ms
 BLE_UART ble;
 EEPROM eeprom;
-ColorSensing cs;
+ColorSensing cs/*(&ble)*/;
 GyroBNO055 gyro;
 Ejector ejector;
 TofSensors tof;
