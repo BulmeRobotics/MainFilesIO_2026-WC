@@ -48,7 +48,7 @@ class Ejector {
 
     public:
         //----Constructor----
-        Ejector(uint8_t rescuePacks = 12);
+        Ejector(uint8_t rescuePacks = 8);
 
         //----Methods----
         /**
