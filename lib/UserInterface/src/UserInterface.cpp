@@ -200,7 +200,7 @@ void UserInterface::ConstructRunMenu() {
     // --- Mapping Info ---
     display.setCursor(MAP_AREA_WIDTH + 15, 330);
     display.print("MAPPING");
-    display.drawLine(MAP_AREA_WIDTH + 15, 355, 780, 245, TEXT_COLOR);
+    display.drawLine(MAP_AREA_WIDTH + 15, 355, 780, 355, TEXT_COLOR);
 
     display.setCursor(MAP_AREA_WIDTH + 15, 370);
     display.setTextColor(0x07E0, HL_COLOR);
