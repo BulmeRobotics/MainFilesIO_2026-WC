@@ -26,6 +26,7 @@ enum class ErrorCodes : uint8_t {
     BUMPER_WALL,
     BUMPER_DISABLED,
     RAMP_END,
+    RAMP_DEAD_END,
     TURNED,
     NOT_ALIGNING,
     CHECK_DRIVE,

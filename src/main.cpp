@@ -389,8 +389,19 @@ while (true) {
       else if (robot.CheckDrive() == ErrorCodes::SCAN_DRIVE) {
         currentRunState = RunState::SCAN;
       }
-      else if (robot.RampHandler() == ErrorCodes::RAMP_END) {
-        currentRunState = RunState::SCAN;
+      else {
+        ErrorCodes rampSave = robot.RampHandler();
+        if (rampSave == ErrorCodes::RAMP_END) {
+          currentRunState = RunState::SCAN;
+        }
+        else if (rampSave == ErrorCodes::RAMP_DEAD_END) {
+          // Wall-terminated up-ramp: robot has already reversed back down. The mapper is still on
+          // the ramp tile (Move(true) at ramp entry), so mark it black and step back — same as the
+          // drove-into-a-black-tile path. Skips the normal SCAN / mapper.Ramp geometry.
+          mapper.SetTile(0x0F, TileType::black);
+          mapper.Move(false);
+          currentRunState = RunState::SETTILE;
+        }
       }
       // else: stay in DRIVE
     }

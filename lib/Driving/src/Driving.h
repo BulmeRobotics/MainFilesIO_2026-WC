@@ -264,6 +264,11 @@ class Driving {
         static constexpr float   STAIR_DOWN_1TILE_OFFSET = 2.6f;	// Subtracted from |angle| to recover true incline
         static constexpr float   STAIR_DOWN_1TILE_HYP_MAX = 490.0f;	// Corrected-hyp threshold below which it's a 1-tile descent (330 vs 650)
 
+        //----Dead-end ramp (wall at the top) recovery----
+        static constexpr uint8_t RAMP_DEADEND_FRONT_MM  = 100;	// Front ToF distance flagging a wall-terminated up-ramp
+        static constexpr uint8_t RAMP_DEADEND_DEBOUNCE  = 3;	// Consecutive cycles all trigger conditions must hold
+        static constexpr uint8_t RAMP_DEADEND_REV_SPEED = 30;	// Reverse speed when backing off a dead-end ramp
+
         //----Drive PID tuning----
         // ZN: Ku=10.0, Tu=0.3s → P=0.6*Ku, I=2*P/Tu, D=P*Tu/8; dt_nominal: clamp threshold = 70ms
         static constexpr PID_Coefficients PID_DRIVE = { 6.0f, 40.0f, 0.15f, 0.035f };
@@ -359,6 +364,7 @@ class Driving {
         float    aggregatedIncline      = 0.0f;   // Total-variation jitter metric from CheckStairRamp; basis for logged GVar
         float    arrIncline[INCLINE_ARRAY_SIZE] = { 0.0f };
         uint16_t arrInclineIndex        = 0;
+        uint8_t  deadEndCounter         = 0;    // Debounce for wall-terminated up-ramp detection
 
         //----Drive PID state----
         float integralError   = 0.0f;
@@ -394,6 +400,8 @@ class Driving {
         float       ComputeMedianIncline(void);
         void        ClassifyAndFinishRamp(void);
         void        CalculateRampGeometry(bool rampUp, bool rampDown, bool isStair);
+        bool        DetectRampDeadEnd(void);
+        ErrorCodes  ReverseOffRamp(void);
 
         //----Bumper helpers----
         ErrorCodes  HandleWallCollision(void);

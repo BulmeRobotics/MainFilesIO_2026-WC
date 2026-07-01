@@ -402,6 +402,60 @@ ErrorCodes Driving::ReverseBlackTile(void) {
 	return ErrorCodes::OK;
 }
 
+bool Driving::DetectRampDeadEnd(void){
+	// A wall-terminated up-ramp never flattens onto a tile. Flag it when the front sensor sees a
+	// close wall while all four side sensors confirm the robot sits square on the ramp. Debounced
+	// over RAMP_DEADEND_DEBOUNCE consecutive cycles; any non-VALID reading resets the counter.
+	bool frontWall = (p_tof->GetStatus(TofType::FRONT) == TofStatus::VALID) &&
+	                 (p_tof->GetRange(TofType::FRONT) < RAMP_DEADEND_FRONT_MM);
+
+	bool sidesWalled =
+		(p_tof->GetStatus(TofType::LEFT_FRONT)  == TofStatus::VALID) && (p_tof->GetRange(TofType::LEFT_FRONT)  < TOF_SIDE_WALL_THRESHOLD) &&
+		(p_tof->GetStatus(TofType::LEFT_BACK)   == TofStatus::VALID) && (p_tof->GetRange(TofType::LEFT_BACK)   < TOF_SIDE_WALL_THRESHOLD) &&
+		(p_tof->GetStatus(TofType::RIGHT_FRONT) == TofStatus::VALID) && (p_tof->GetRange(TofType::RIGHT_FRONT) < TOF_SIDE_WALL_THRESHOLD) &&
+		(p_tof->GetStatus(TofType::RIGHT_BACK)  == TofStatus::VALID) && (p_tof->GetRange(TofType::RIGHT_BACK)  < TOF_SIDE_WALL_THRESHOLD);
+
+	if (frontWall && sidesWalled) deadEndCounter++;
+	else                          deadEndCounter = 0;
+
+	return deadEndCounter >= RAMP_DEADEND_DEBOUNCE;
+}
+
+ErrorCodes Driving::ReverseOffRamp(void){
+	// Backs the robot down a dead-end up-ramp until the incline returns to flat, then restores the
+	// exact ramp-exit state the normal path leaves behind — minus geometry, since the robot returns
+	// to its start level (no height change). Guarded by an encoder-time limit so a stuck gyro can
+	// never reverse the robot out of the maze.
+	p_drivetrain->EnableEncoder();
+	p_drivetrain->ResetEncoder();
+	ts_encoderStartTime = millis();
+
+	float incline = 0.0f;
+	do {
+		p_drivetrain->SetSpeed(-RAMP_DEADEND_REV_SPEED);
+		p_gyro->GetAngleAdvanced(0, GyroAxles::Axis_Z);
+		incline = -p_gyro->data.angle_car;
+	} while ((incline > 4 || incline < -4) && millis() < (ts_encoderStartTime + DEFAULT_MAX_ENCODER_TIME));
+
+	p_drivetrain->Stop();
+	p_drivetrain->DisableEncoder();
+
+	// Mirror the normal ramp-exit cleanup (ClassifyAndFinishRamp + FinishRamp + SCAN state), without
+	// the geometry/height update — the level is unchanged.
+	_RAMP_UP       = false;
+	_RAMP_DOWN     = false;
+	_STAIR         = false;
+	deadEndCounter = 0;
+	arrInclineIndex = 0;
+	maxRampIncline = 0;
+	ClearOnRamp();
+	p_colorSensing->Freeze(false);
+	EnableBumpers();
+	StartAlign();
+
+	return ErrorCodes::OK;
+}
+
 TOF_Optimal_Value Driving::GetOptimalSensor(bool rampDown){
 	// Selects the best reference sensor (front/back/encoder) for the upcoming drive segment.
 	TOF_Optimal_Value result;
@@ -487,6 +541,14 @@ ErrorCodes Driving::RampHandler(void){
 			EndDrive();
 			ClassifyAndFinishRamp();
 			return ErrorCodes::RAMP_END;
+		}
+
+		// Dead-end up-ramp: a wall at the top means the ramp never flattens onto a tile. Detected
+		// only while still inclined (flat exits above), so a normal ramp with a wall on the landing
+		// is unaffected. Reverse back down and let main.cpp mark the ramp entrance black.
+		if (_RAMP_UP && DetectRampDeadEnd()) {
+			ReverseOffRamp();
+			return ErrorCodes::RAMP_DEAD_END;
 		}
 	}
 	return ErrorCodes::OK;
