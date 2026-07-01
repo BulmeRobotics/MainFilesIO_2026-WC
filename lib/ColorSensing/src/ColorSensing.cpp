@@ -244,7 +244,7 @@ PoI_Type ColorSensing::checkFront(){
     }
 
     //Silver - checkpoint
-    if(colorRaw[4] < 7000 && colorRaw[5] < 7000){
+    if(colorRaw[4] > 8500 && colorRaw[7] < 5700){
         _checkpoint = true;
         _ALERT = true;
         return PoI_Type::checkpoint;
@@ -273,7 +273,8 @@ TileType ColorSensing::checkMiddle(){
     //Only prints values when debugPort is set, otherwise does nothing
     printDebugData(colorRaw, 'M');
     
-    if(_checkpoint && colorRaw[8] > 61000) return TileType::checkpoint;
+    //Checkpoint
+    if(_checkpoint && colorRaw[7] < 38000 && colorRaw[4] > 59000) return TileType::checkpoint;
 
     //Blau:
     if(colorRaw[8] < 40000){
