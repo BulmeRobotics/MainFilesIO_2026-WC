@@ -272,9 +272,9 @@ ErrorCodes Vcameras::Update(bool onRed, bool onRamp){
     sprintf(buffer,"VICTIM: %c, Side: %c", victim, ((side == ErrorCodes::left) ? 'L' : 'R'));
     _ui->ShowPopup(buffer, ErrorCodes::info, 5);
 
-    _ui->LED_BUZZER_Signal(500, 500 ,1);
+    _ui->Signal(ErrorCodes::BUZZER_LED, 500, 500 ,1);
     _ui->Update();
-    _ui->LED_BUZZER_Signal(500, 500 ,4);
+    _ui->Signal(ErrorCodes::LED, 500, 500 ,4);
 
     //Eject
     _ejector->Eject(side, amount);

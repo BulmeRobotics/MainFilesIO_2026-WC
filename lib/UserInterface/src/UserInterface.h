@@ -243,31 +243,16 @@ public:
 
     // SIGNALS ---------------------------------------------------------------------------------
 
-    /** 
-     * @brief Triggers the Buzzer Signal; is Blocking!
-     * @param time_ms Duration of the signal in milliseconds
-     * @param pause_ms Pause between signals in milliseconds
-     * @param repetitions Number of repetitions of the signal
-     */
-    void BuzzerSignal(uint16_t time_ms, uint16_t pause_ms, uint8_t repetitions);
 
     /**
-     * @brief Triggers the LED Signal; is Blocking!
-     * @param color Color of the LED signal (0xRRGGBBWW)
-     * @param time_ms Duration of the signal in milliseconds
-     * @param pause_ms Pause between signals in milliseconds
+     * @brief Triggers the LED / Buzzer Signal; is Blocking!
+     * @param type what to signal: BUZZER; LED; BUZZER_LED
+     * @param time_on_ms Duration of the signal in milliseconds
+     * @param time_off_ms Pause between signals in milliseconds
      * @param repetitions Number of repetitions of the signal
+     * @return true...success; false...failed
      */
-    void LEDSignal(uint16_t time_ms, uint16_t pause_ms, uint8_t repetitions);
-
-    /**
-     * @brief Triggers the LED and Buzzer Signal; is Blocking!
-     * @param color Color of the LED signal (0xRRGGBBWW)
-     * @param time_ms Duration of the signal in milliseconds
-     * @param pause_ms Pause between signals in milliseconds
-     * @param repetitions Number of repetitions of the signal
-     */
-    void LED_BUZZER_Signal(uint16_t time_ms, uint16_t pause_ms, uint8_t repetitions);
+    bool Signal(ErrorCodes type, uint16_t time_on_ms, uint16_t time_off_ms, uint8_t repetitions);
 
     /**
      * @brief Set the LED Illumination of the Robot (Light for Camera)

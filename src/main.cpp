@@ -252,7 +252,7 @@ while (true) {
     cyclicRunTask();  //Cyclic Run Tasks
 
     if (currentRunState == RunState::SETTILE) {
-      UI.BuzzerSignal(5, 0, 1);
+      UI.Signal(ErrorCodes::BUZZER, 5, 0, 1);
 			mapper.SetTile(tof.GetWalls(), cs.GetFloor());
 
       //Checkpoint handling
@@ -460,7 +460,7 @@ while (true) {
       cam.Enable(false);
       currentMenuState = RobotState::ABOUT;
       UI.Update();
-      UI.LED_BUZZER_Signal(1000,1000,5);
+      UI.Signal(ErrorCodes::BUZZER_LED, 1000,1000,5);
     }
   } 
   

@@ -85,19 +85,19 @@ void UserInterface::DrawMainMenuStatic() {
 void UserInterface::HandleMainMenu(uint16_t tx, uint16_t ty) {
     if (btnMenuLocation.IsPressed(tx, ty) && *p_state != RobotState::INFO_VISUAL) {
         *p_state = RobotState::INFO_VISUAL;
-        BuzzerSignal(5, 0, 1);
+        Signal(ErrorCodes::BUZZER, 5, 0, 1);
     }
     else if (btnMenuSensor.IsPressed(tx, ty) && *p_state != RobotState::INFO_SENSOR) {
         *p_state = RobotState::INFO_SENSOR;
-        BuzzerSignal(5, 0, 1);
+        Signal(ErrorCodes::BUZZER, 5, 0, 1);
     }
     else if (btnMenuSettings.IsPressed(tx, ty) && *p_state != RobotState::SETTINGS) {
         *p_state = RobotState::SETTINGS;
-        BuzzerSignal(5, 0, 1);
+        Signal(ErrorCodes::BUZZER, 5, 0, 1);
     }
     else if (btnMenuAbout.IsPressed(tx, ty) && *p_state != RobotState::ABOUT) {
         *p_state = RobotState::ABOUT;
-        BuzzerSignal(5, 0, 1);
+        Signal(ErrorCodes::BUZZER, 5, 0, 1);
     }
 }
 
@@ -641,7 +641,7 @@ void UserInterface::FinishCalibration(bool success){
     while (millis() - start < 3000) {
         if (NewContact) {
             NewContact = false;
-            BuzzerSignal(5, 0, 1);
+            Signal(ErrorCodes::BUZZER, 5, 0, 1);
             break; // Beendet das Warten sofort bei Touch
         }
         delay(10); // Verhindert Watchdog-Crashes
@@ -701,7 +701,7 @@ void UserInterface::FinishReset(bool success){
     while (millis() - start < 1000) {
         if (NewContact) {
             NewContact = false;
-            BuzzerSignal(5, 0, 1);
+            Signal(ErrorCodes::BUZZER, 5, 0, 1);
             break; // Beendet das Warten sofort bei Touch
         }
         delay(10); // Verhindert Watchdog-Crashes
@@ -763,7 +763,7 @@ void UserInterface::Initialize(){
     if(GetCharge() <= 10) {
         AddInfoMsg("Battery", "LOW/ERROR!", false);
         while(true){
-            BuzzerSignal(200,200,1);
+            Signal(ErrorCodes::BUZZER, 200,200,1);
         }
     } else AddInfoMsg("Battery", "OK", true);
     
@@ -990,7 +990,7 @@ void UserInterface::Update(){
     } else if(*p_state == RobotState::BOOT){
         if(touched){
             *p_state = RobotState::SETTINGS;
-            BuzzerSignal(5,0,1);
+            Signal(ErrorCodes::BUZZER, 5,0,1);
         }
     } 
     else if (*p_state == RobotState::SETTINGS){
@@ -1032,7 +1032,7 @@ void UserInterface::Update(){
         if(touched){
             //Layer Settings
             if(btnLayerSetting.IsPressed(tx,ty)){
-                BuzzerSignal(5,0,1);
+                Signal(ErrorCodes::BUZZER, 5,0,1);
                 ErrorCodes newLayer = ErrorCodes::single;
                 if(p_mapping->GetSetting(ErrorCodes::layer) == ErrorCodes::single) newLayer = ErrorCodes::multi;
                 p_mapping->SetSettings(newLayer, p_mapping->GetSetting(ErrorCodes::ramp));
@@ -1040,7 +1040,7 @@ void UserInterface::Update(){
             }
 
             if(btnRampSetting.IsPressed(tx,ty)){
-                BuzzerSignal(5,0,1);
+                Signal(ErrorCodes::BUZZER, 5,0,1);
                 ErrorCodes newRamp = ErrorCodes::single;
                 if(p_mapping->GetSetting(ErrorCodes::ramp) == ErrorCodes::single) newRamp = ErrorCodes::multi;
                 p_mapping->SetSettings(p_mapping->GetSetting(ErrorCodes::ramp), newRamp);
@@ -1050,41 +1050,41 @@ void UserInterface::Update(){
             //Speed
             if(btnSpeedMinus.IsPressed(tx,ty) && driveSpeed > 10){
                 driveSpeed -= 10;
-                BuzzerSignal(5, 0, 1);
+                Signal(ErrorCodes::BUZZER, 5, 0, 1);
             } else if(btnSpeedPlus.IsPressed(tx,ty) && driveSpeed < 100){
                 driveSpeed += 10;
-                BuzzerSignal(5, 0, 1);
+                Signal(ErrorCodes::BUZZER, 5, 0, 1);
             }
 
             //Calibration
             else if(btnCalibWhite.IsPressed(tx,ty)){
-                BuzzerSignal(5, 0, 1);
+                Signal(ErrorCodes::BUZZER, 5, 0, 1);
                 *p_state = RobotState::CALIBRATION;
                 p_colorSens->Calibrate(PoI_Type::white);
             }
             else if(btnCalibBlack.IsPressed(tx,ty)){
-                BuzzerSignal(5, 0, 1);
+                Signal(ErrorCodes::BUZZER, 5, 0, 1);
                 *p_state = RobotState::CALIBRATION;
                 p_colorSens->Calibrate(PoI_Type::black);
             }
             else if(btnCalibBlue.IsPressed(tx,ty)){
-                BuzzerSignal(5, 0, 1);
+                Signal(ErrorCodes::BUZZER, 5, 0, 1);
                 *p_state = RobotState::CALIBRATION;
                 p_colorSens->Calibrate(PoI_Type::blue);
             }
             else if(btnCalibDZone.IsPressed(tx,ty)){
-                BuzzerSignal(5, 0, 1);
+                Signal(ErrorCodes::BUZZER, 5, 0, 1);
                 *p_state = RobotState::CALIBRATION;
                 p_colorSens->Calibrate(PoI_Type::red);
             }
             else if(btnCalibCheckP.IsPressed(tx,ty)){
-                BuzzerSignal(5, 0, 1);
+                Signal(ErrorCodes::BUZZER, 5, 0, 1);
                 *p_state = RobotState::CALIBRATION;
                 p_colorSens->Calibrate(PoI_Type::checkpoint);
             }
             //BLE
             else if(btnBleConnect.IsPressed(tx,ty) && _BLE_ENABLED){
-                BuzzerSignal(5, 0, 1);
+                Signal(ErrorCodes::BUZZER, 5, 0, 1);
                 *p_state = RobotState::BT;
             }            
         }
@@ -1123,33 +1123,21 @@ void UserInterface::SetIllumination(uint8_t red, uint8_t green, uint8_t blue, ui
 
 }
 
-void UserInterface::BuzzerSignal(uint16_t time_ms, uint16_t pause_ms, uint8_t repetitions){
-    for(uint8_t i = 0; i < repetitions; i++){
-        digitalWrite(buzzerPin, HIGH);
-        delay(time_ms);
-        digitalWrite(buzzerPin, LOW);
-        delay(pause_ms);
-    }
-}
+bool UserInterface::Signal(ErrorCodes type, uint16_t time_on_ms, uint16_t time_off_ms, uint8_t repetitions){
+    if(!(type == ErrorCodes::BUZZER || type == ErrorCodes::LED || type == ErrorCodes::BUZZER_LED)) return false;
 
-void UserInterface::LEDSignal(uint16_t time_ms, uint16_t pause_ms, uint8_t repetitions){
-    for(uint8_t i = 0; i < repetitions; i++){
-        digitalWrite(ledPin, HIGH);
-        delay(time_ms);
-        digitalWrite(ledPin, LOW);
-        delay(pause_ms);
-    }
-}
+    for(uint8_t i = 0; i<repetitions; i++){
+        //On cycle
+        if(type != ErrorCodes::LED) digitalWrite(buzzerPin, HIGH);
+        if(type != ErrorCodes::BUZZER) digitalWrite(ledPin, HIGH);
+        delay(time_on_ms);
 
-void UserInterface::LED_BUZZER_Signal(uint16_t time_ms, uint16_t pause_ms, uint8_t repetitions){
-    for(uint8_t i = 0; i < repetitions; i++){
-        digitalWrite(ledPin, HIGH);
-        digitalWrite(buzzerPin, HIGH);
-        delay(time_ms);
-        digitalWrite(ledPin, LOW);
-        digitalWrite(buzzerPin, LOW);
-        delay(pause_ms);
+        //Off Cycle
+        if(type != ErrorCodes::LED) digitalWrite(buzzerPin, LOW);
+        if(type != ErrorCodes::BUZZER) digitalWrite(ledPin, LOW);
+        delay(time_off_ms);
     }
+    return true;
 }
 
 #ifdef _MSC_VER
