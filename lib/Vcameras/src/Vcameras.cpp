@@ -286,5 +286,7 @@ ErrorCodes Vcameras::Update(bool onRed, bool onRamp){
     //2RP - Harmed
     //1RP - Stable
     //0RP - Unharmed
+
+    _timeFound = millis();  //reset reset time to compensate for waiting
     return ErrorCodes::OK;
 }
