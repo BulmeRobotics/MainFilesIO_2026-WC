@@ -112,28 +112,28 @@ uint16_t Mapping::findNextTarget() {
     case Orientations::North:
         if      (n != -1 && tiles[n].type == TileType::unexplored) bufferTargetIndex = n;
         else if (e != -1 && tiles[e].type == TileType::unexplored) bufferTargetIndex = e;
-        else if (s != -1 && tiles[s].type == TileType::unexplored) bufferTargetIndex = s;
         else if (w != -1 && tiles[w].type == TileType::unexplored) bufferTargetIndex = w;
+        else if (s != -1 && tiles[s].type == TileType::unexplored) bufferTargetIndex = s;
         break;
     case Orientations::East:
         if      (e != -1 && tiles[e].type == TileType::unexplored) bufferTargetIndex = e;
         else if (s != -1 && tiles[s].type == TileType::unexplored) bufferTargetIndex = s;
-        else if (w != -1 && tiles[w].type == TileType::unexplored) bufferTargetIndex = w;
         else if (n != -1 && tiles[n].type == TileType::unexplored) bufferTargetIndex = n;
+        else if (w != -1 && tiles[w].type == TileType::unexplored) bufferTargetIndex = w;
         break;
 
     case Orientations::South:
         if      (s != -1 && tiles[s].type == TileType::unexplored) bufferTargetIndex = s;
         else if (w != -1 && tiles[w].type == TileType::unexplored) bufferTargetIndex = w;
-        else if (n != -1 && tiles[n].type == TileType::unexplored) bufferTargetIndex = n;
         else if (e != -1 && tiles[e].type == TileType::unexplored) bufferTargetIndex = e;
+        else if (n != -1 && tiles[n].type == TileType::unexplored) bufferTargetIndex = n;
         break;
 
     case Orientations::West:
         if      (w != -1 && tiles[w].type == TileType::unexplored) bufferTargetIndex = w;
         else if (n != -1 && tiles[n].type == TileType::unexplored) bufferTargetIndex = n;
-        else if (e != -1 && tiles[e].type == TileType::unexplored) bufferTargetIndex = e;
         else if (s != -1 && tiles[s].type == TileType::unexplored) bufferTargetIndex = s;
+        else if (e != -1 && tiles[e].type == TileType::unexplored) bufferTargetIndex = e;
         break;
     default:
         break;
