@@ -403,6 +403,11 @@ while (true) {
       else if (robot.CheckDrive() == ErrorCodes::SCAN_DRIVE) {
         currentRunState = RunState::SCAN;
       }
+      // Ramps set to "off" in the UI: skip ramp detection/handling entirely — drive over any incline as
+      // normal ground. Nothing gets mapped as a ramp, so no ramp instructions are ever issued either.
+      else if (mapper.GetSetting(ErrorCodes::ramp) == ErrorCodes::disabled) {
+        // stay in DRIVE; plain PID driving, CheckDrive above handles tile boundaries
+      }
       else {
         ErrorCodes rampSave = robot.RampHandler();
         if (rampSave == ErrorCodes::RAMP_END) {

@@ -154,6 +154,13 @@ private:
     static void DrawIconSettings(GigaDisplay_GFX& display, uint16_t cx, uint16_t cy);
     static void DrawIconAbout(GigaDisplay_GFX& display, uint16_t cx, uint16_t cy);
 
+    // Button label for the ramp setting: short (single) / dynamic (multi) / off (disabled)
+    static const char* RampSettingLabel(ErrorCodes ramp){
+        if(ramp == ErrorCodes::single)   return "short";
+        if(ramp == ErrorCodes::disabled) return "off";
+        return "dynamic";
+    }
+
 // --- Buttons ---
 
     // -- Menu Buttons --

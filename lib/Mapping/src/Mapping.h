@@ -194,7 +194,7 @@ public: // --- PUBLIC ---
             _layerSetting = layer;
         else return ErrorCodes::invalid;
 
-        if(ramp == ErrorCodes::single || ramp == ErrorCodes::multi)
+        if(ramp == ErrorCodes::single || ramp == ErrorCodes::multi || ramp == ErrorCodes::disabled)
             _rampSetting = ramp;
         else return ErrorCodes::invalid;
 

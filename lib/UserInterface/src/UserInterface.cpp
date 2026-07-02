@@ -478,7 +478,7 @@ void UserInterface::ConstructSettingsMenu() {
     display.setCursor(150,330);
     display.print("Map: LAYER | RAMP");
     btnLayerSetting.Draw(display,(p_mapping->GetSetting(ErrorCodes::layer)  == ErrorCodes::single) ? "single" : "multi");
-    btnRampSetting.Draw (display,(p_mapping->GetSetting(ErrorCodes::ramp)   == ErrorCodes::single) ? "short" : "dynamic");
+    btnRampSetting.Draw (display, RampSettingLabel(p_mapping->GetSetting(ErrorCodes::ramp)));
 }
 
 #ifdef _MSC_VER
@@ -1042,10 +1042,15 @@ void UserInterface::Update(){
 
             if(btnRampSetting.IsPressed(tx,ty)){
                 Signal(ErrorCodes::BUZZER, 5,0,1);
-                ErrorCodes newRamp = ErrorCodes::single;
-                if(p_mapping->GetSetting(ErrorCodes::ramp) == ErrorCodes::single) newRamp = ErrorCodes::multi;
-                p_mapping->SetSettings(p_mapping->GetSetting(ErrorCodes::ramp), newRamp);
-                btnRampSetting.Draw(display,(p_mapping->GetSetting(ErrorCodes::ramp) == ErrorCodes::single) ? "short" : "dynamic");
+                // Cycle short -> dynamic -> off -> short. "off" (disabled) stops ramp detection entirely (see main.cpp DRIVE).
+                ErrorCodes newRamp;
+                switch(p_mapping->GetSetting(ErrorCodes::ramp)){
+                    case ErrorCodes::single: newRamp = ErrorCodes::multi;    break;	// short   -> dynamic
+                    case ErrorCodes::multi:  newRamp = ErrorCodes::disabled; break;	// dynamic -> off
+                    default:                 newRamp = ErrorCodes::single;   break;	// off     -> short
+                }
+                p_mapping->SetSettings(p_mapping->GetSetting(ErrorCodes::layer), newRamp);
+                btnRampSetting.Draw(display, RampSettingLabel(p_mapping->GetSetting(ErrorCodes::ramp)));
             }
 
             //Speed
