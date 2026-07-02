@@ -6,6 +6,7 @@
 #ifndef _MAPPING_H_
 #define _MAPPING_H_
 
+#include <Arduino.h>
 #include <CustomDatatypes.h>
 
 #define MAX_TILES 256
