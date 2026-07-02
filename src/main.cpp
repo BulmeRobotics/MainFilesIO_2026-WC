@@ -247,6 +247,7 @@ while (true) {
       robot.EnableBumpers();	  //Enable Bumpers
 			robot.StartAlign();	      //Start Aligning
 			gyro.ResetAllAngles();	  //Gyro angle zero
+			robot.SetRobotTargetAngle(Orientations::North);
 			robot.SetMaxRampIncline(0);
 			robot.SetCurrentRobotHeight(0);
       delay(250); 

@@ -778,6 +778,7 @@ void UserInterface::ConnectPointer(RobotState* state, ColorSensing* cs, Mapping*
     p_mapping = mapping;
     p_camera = camera;
     p_ejector = ejector;
+    if (p_mapping) p_mapping->SetPriority(driveMode);
     return;
 }
 

@@ -96,6 +96,7 @@ uint16_t Mapping::findNextTarget() {
     Orientations bufferPriority = Orientations::North;
 
     if (pathPriority == ErrorCodes::straight) bufferPriority = currentOrientation;
+    else if (pathPriority == ErrorCodes::north) bufferPriority = Orientations::North;
     else if (pathPriority == ErrorCodes::east) bufferPriority = Orientations::East;
     else if (pathPriority == ErrorCodes::south) bufferPriority = Orientations::South;
     else if (pathPriority == ErrorCodes::west) bufferPriority = Orientations::West;
@@ -826,6 +827,7 @@ void Mapping::Reset(void) {
     //set first tile as start
     tiles[0].type = TileType::unexplored;
     currentPosition = 0;
+    currentOrientation = Orientations::North;
 
     resetCounter = 0;
     lastCheckpointPosition = currentPosition;
