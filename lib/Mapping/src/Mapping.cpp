@@ -613,6 +613,10 @@ Instructionset Mapping::GetInstruction() {
 
         targetPosition = findNextTarget();
 
+        //Check for Overflow
+        if (targetPosition >= UINT16_MAX)
+            return Instructionset::Overflow;
+
         //Pathfinding - A* Algorithm Implementation
         initLists(targetPosition);
 
